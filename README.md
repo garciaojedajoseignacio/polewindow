@@ -2,7 +2,21 @@
 
 PoleWindow is a simple web tool that lets mission planners, educators, and the public compare lunar south-pole landing sites and date ranges in minutes. For each site it shows when the Sun is above the horizon (solar-power window) and when Earth is above the horizon (direct-to-Earth communications window), using JPL DE421 ephemerides — the same family of geometry provided by NASA’s Horizons System — in an interactive chart and a ranking table.
 
-This project was built for the [NASA Space Apps Challenge 2026](https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/) challenge **Lunar Landing Site Navigator**.
+This project was built for the [NASA Space Apps Challenge 2026](https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/) challenge **Lunar Landing Site Navigator** by team **Kirby Landers**.
+
+## Live demo (GitHub Pages)
+
+**https://garciaojedajoseignacio.github.io/polewindow/**
+
+The demo is a static page (plain HTML, CSS, and JavaScript; no server, no login, no API keys). It loads precomputed JSON for the whole year **2027** at a **1-hour step** (8,760 samples) and shows:
+
+- A south polar stereographic map (±200 km around the pole) over a shaded-relief image made from **LRO LOLA** topography, with a heat map of Sun, Earth, Sun + Earth visibility or longest night.
+- **Click anywhere** between 84°S and the pole to read the values at the nearest of 4,597 precomputed grid points (1.5 km spacing within 36 km of the pole, 6 km beyond).
+- A sortable ranking of the five cited sites, with a toggle between the **terrain-aware (LOLA)** and the **spherical** horizon.
+- For each site: its LOLA horizon profile with the Sun and Earth paths over 2027, and a daily timeline of hours of Sun, Earth, and both.
+- Method, sources, validation and limitations.
+
+The static site lives in [`docs/`](docs/) and is published to the `gh-pages` branch.
 
 ## How it answers the challenge
 
@@ -55,9 +69,50 @@ Only these five cited sites are bundled. Do not treat crater-center coordinates 
 | Haworth crater center | −86.90 | −4.00 | USGS / IAU Gazetteer, Feature 14502, https://planetarynames.wr.usgs.gov/Feature/14502 |
 | Faustini crater center | −87.18 | 84.31 | USGS / IAU Gazetteer, Feature 1919, https://planetarynames.wr.usgs.gov/Feature/1919 |
 
-## Limitation: spherical horizon, no LOLA terrain
+## Terrain-aware horizon (LRO LOLA)
 
-Elevations are computed over a **smooth spherical lunar horizon**. Local LOLA topography (crater walls, massifs, and ridgelines) is **not** applied. A Sun or Earth that is only a degree or two above this ideal horizon may be hidden by real terrain. Crater-floor centers (Shackleton, Haworth, Faustini) will therefore look more sunlit and more Earth-visible than they are in reality. This limitation is also shown in the app.
+The demo adds terrain with the LOLA gridded data record **`LDEM_75S_240M`** (data set `LRO-L-LOLA-4-GDR-V1.0`, product version 2.0, 2017-06-15; 240 m/pixel, south polar stereographic, 75°S to the pole, heights relative to a 1737.4 km sphere, frame "Mean Earth/Polar Axis of DE421"), from the NASA PDS Geosciences Node:
+
+- https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_75s_240m.img (29 MB)
+- https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_75s_240m.lbl
+
+Projection equations follow the product's `DSMAP_POLAR.CAT`. For each location, `scripts/precompute.py` casts 360 rays (1° azimuth) along great circles out to 150 km, samples the DEM every 240 m (bilinear), accounts for lunar curvature, and keeps the maximum elevation angle per azimuth. The observer is 2 m above the LOLA surface. The Sun or Earth is "visible" when its center is above that horizon at its azimuth. The spherical-horizon results (center above 0°) are kept side by side for comparison.
+
+The DEM itself is not committed (it is gitignored); only the derived `docs/assets/lola_hillshade.png` (illustrative shading, not real lighting) and the JSON results are.
+
+### Results for 2027 (hourly, body center above the horizon)
+
+| Site | Sun % terrain (spherical) | Earth % terrain (spherical) | Sun + Earth % terrain (spherical) | Longest night, terrain (spherical) |
+|---|---|---|---|---|
+| Connecting Ridge (proposed landing site) | 57.35 (52.31) | 47.67 (45.22) | 30.41 (24.03) | 12.3 d (165.0 d) |
+| Peak Near Shackleton (proposed landing site) | 35.13 (52.15) | 48.90 (44.27) | 19.61 (23.11) | 28.1 d (112.3 d) |
+| Shackleton crater center | 0.00 (54.58) | 0.00 (46.10) | 0.00 (24.59) | all year (165.8 d) |
+| Haworth crater center | 0.00 (48.96) | 0.00 (62.47) | 0.00 (31.00) | all year (19.6 d) |
+| Faustini crater center | 0.00 (49.86) | 0.00 (48.45) | 0.00 (24.87) | all year (20.0 d) |
+
+The three gazetteer crater centers sit on permanently shadowed crater floors in the terrain model, which is why the spherical model badly overstates them. The most sunlit grid points (up to about 68 % of 2027, e.g. 89.69°S, 198.4°E) cluster on the Shackleton rim and the connecting ridge, the same areas reported as highly illuminated in published LOLA illumination studies (e.g., Mazarico et al., 2011, *Icarus* 211, 1066–1081). Our maxima are lower than published values because of the 1.5 km grid, the 240 m DEM, and the center-of-disk rule.
+
+### Limitations
+
+- Visibility uses the **center** of the Sun and Earth; partial solar disk, panel height and orientation are not modeled.
+- 240 m resolution smooths summits and ridges; real illumination at a specific lander spot can differ. Higher-resolution LOLA DEMs (5–20 m) exist but were not used.
+- One year (2027) only; polar illumination varies over the 18.6-year lunar nodal cycle.
+- Earth visibility is geometric line of sight, not a link budget.
+- Not an official NASA product and not a mission-planning tool.
+
+## Regenerating the demo data
+
+```bash
+source .venv/bin/activate
+pip install -r requirements.txt pillow
+# JPL/NAIF kernels in ./data (see below), plus the LOLA DEM:
+curl -o data/ldem_75s_240m.img https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_75s_240m.img
+python scripts/precompute.py --year 2027 --validate   # ~75 s on a laptop
+```
+
+This writes `docs/data/sites.json`, `docs/data/grid.json` and `docs/assets/lola_hillshade.png`. `--validate` checks the vectorized Sun/Earth elevations against `compute.py` (Skyfield topocentric) for the five sites. To preview: `python -m http.server -d docs 8000`.
+
+The Flask app below (`app.py`) is the original dynamic version (spherical horizon only, up to 180 days per request); the published demo does not need it.
 
 ## How to run
 
@@ -118,7 +173,12 @@ Then open http://127.0.0.1:5000 in the local browser.
 
 ## AI assistance
 
-GitHub Copilot was used as AI assistance to help write project code. The scientific method (Skyfield + DE421 + MOON_ME_DE421, spherical horizon, cited coordinates) was specified and verified independently, including the Horizons cross-check above. No NASA logos or marks were generated or modified with AI.
+Space Apps asks teams to disclose AI use. This project used:
+
+- **GitHub Copilot** to help write project code.
+- **An AI assistant** to help draft code (including `scripts/precompute.py` and the static page in `docs/`), this README, and the research for data sources.
+
+The scientific method and data choices (Skyfield + DE421 + MOON_ME_DE421, LOLA LDEM_75S_240M, cited site coordinates) were checked by the team: the Horizons cross-check above, the `--validate` comparison, and the DEM orientation check against known features. No NASA logos or marks were generated or modified with AI.
 
 ## License
 

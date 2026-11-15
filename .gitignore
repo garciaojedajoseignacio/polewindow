@@ -10,3 +10,8 @@ __pycache__/
 *$py.class
 *.egg-info/
 .Python
+
+# LOLA DEM (large; download from PDS, see scripts/precompute.py)
+data/*.img
+data/*.IMG
+data/ldem_*.lbl
