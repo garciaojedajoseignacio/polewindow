@@ -19,6 +19,9 @@ window.POLEWINDOW_I18N = {
     plTitle: "Planificador de ventana de lanzamiento",
     plIntro: "Los períodos más largos del rango elegido con el Sol y la Tierra a la vista en este lugar, y las fechas de salida desde la Tierra para que una tripulación llegue cuando empieza cada uno. <b>Estimación simplificada de planificación, no un diseño de trayectoria.</b>",
     plNote: 'Supuesto de viaje: 3 a 4,5 días, típico de una transferencia directa estilo Apollo (el Apollo 11 despegó el 16 de julio de 1969 a las 13:32 UTC y entró en órbita lunar el 19 de julio cerca de las 17:22 UTC, unos 3,2 días; <a href="https://www.nasa.gov/history/apollo-11-mission-overview/" target="_blank" rel="noopener">NASA</a>). Las misiones Artemis usan otra arquitectura (Orion y un módulo de alunizaje que se encuentran en órbita lunar), así que sus tiempos reales son distintos. Las fechas reales también dependen de la geometría del sitio de lanzamiento, del vehículo y de la mecánica orbital. Distancia Tierra–Luna: de centro a centro según JPL DE421 en la fecha de llegada; la barra va del mínimo al máximo de 2027, con marcas en el perigeo medio (363.300 km) y el apogeo medio (405.500 km) de la <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html" target="_blank" rel="noopener">NASA Moon Fact Sheet</a>.',
+    propTitle: "Sitio propuesto", loading2: "Cargando…", refLayer: "Sitios de referencia", refTitle: "Sitios de referencia",
+    refNote: "Sitios de alunizaje e impacto anteriores con coordenadas publicadas (fuentes en el detalle de cada uno). Los valores usan el rango y modelo elegidos; los sitios fuera del mapa LOLA de 75°S usan el horizonte esférico.",
+    propRule: "Cómo se elige: entre los puntos de la grilla con Sol &gt; 0, Tierra &gt; 0, Sol + Tierra &gt; 0 y pendiente LOLA bajo 10° (más los filtros activos), el de mayor puntaje = % Sol + Tierra menos 1 punto por cada grado de pendiente sobre 5°. En empate gana más Sol y luego menor pendiente. Es un punto de partida para estudiar, no una recomendación de alunizaje.",
     title: "PoleWindow — Navegador de sitios de alunizaje en el polo sur lunar",
     tag: "Navegador de sitios de alunizaje en el polo sur lunar · NASA Space Apps 2026 · Equipo Kirby Landers",
     navExplore: "Explorar", navMethod: "Método", navSources: "Datos y fuentes", navAbout: "Equipo",
@@ -56,6 +59,8 @@ window.POLEWINDOW_I18N = {
       <li><b>Pendiente.</b> Del mapa oficial de pendientes LOLA <code>LDSM_75S_240M</code>, tomando el píxel de 240 m más cercano. Según la etiqueta del producto, las pendientes salen de ajustar planos a disparos láser sucesivos (línea base de unos 30–120 m) y se entregan en una grilla de 240 m. Umbrales: bajo 5° ideal (verde), 5–10° precaución (ámbar), 10° o más se marca "Advertencia: pendiente elevada – no ideal para alunizaje" (rojo).</li>
       <li><b>Distancia a una región en sombra permanente (PSR).</b> Marcamos como aproximación de PSR cada punto de la grilla donde el centro del Sol nunca sube sobre el horizonte LOLA en todo el año (<span class="nPsr">—</span> puntos) e informamos la distancia al más cercano. Está a la resolución de la grilla (1,5 km cerca del polo, 6 km más lejos); no es un mapa oficial de PSR.</li>
       <li><b>Planificador de ventana de lanzamiento.</b> Para un sitio o punto, los tres períodos más largos con Sol + Tierra en el rango elegido, las fechas de salida desde la Tierra para llegar al inicio (inicio de la ventana menos 3 a 4,5 días de viaje) y la distancia Tierra–Luna (JPL DE421). Estimación simplificada de planificación, no un diseño de trayectoria.</li>
+      <li><b>Sitio propuesto.</b> Para el rango y modelo elegidos, el punto de la grilla con mayor puntaje = % Sol + Tierra menos 1 punto por cada grado de pendiente LOLA sobre 5°, entre los puntos con Sol &gt; 0, Tierra &gt; 0, Sol + Tierra &gt; 0 y pendiente bajo 10° (y los filtros activos). En empate gana más Sol y luego menor pendiente.</li>
+      <li><b>Sitios de referencia.</b> Alunizajes e impactos anteriores con coordenadas publicadas: LCROSS (Cabeus), IM-2 Athena, IM-1 Odysseus, Chandrayaan-3 y Chang'e-6. Los sitios al sur de 75,5°S usan el cálculo con relieve; los demás solo el horizonte esférico. Nuestra pendiente LOLA en el sitio del IM-1 (12,5°) coincide con la pendiente local de ~12° informada por la NASA.</li>
       <li><b>Grilla y rangos de fechas.</b> <span class="gridN">—</span> puntos: cada 1,5 km dentro de 36 km del polo y cada 6 km hasta 84°S. La visibilidad hora a hora de cada punto se guarda comprimida (codificación por tramos) y todas las estadísticas del rango elegido se recalculan en tu navegador.</li>
     </ol>
     <h3>Validación</h3>
@@ -86,6 +91,7 @@ window.POLEWINDOW_I18N = {
       <li><b>Pendiente LRO LOLA</b> — pendiente bidireccional en grilla <code>LDSM_75S_240M</code> (LRO-L-LOLA-4-GDR-V1.0), en el mismo <a href="https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/" target="_blank" rel="noopener">directorio de PDS Geosciences</a>. Datos de la NASA, dominio público.</li>
       <li><b>Regiones de Artemis III</b> — NASA, <a href="https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/" target="_blank" rel="noopener">NASA Provides Update on Artemis III Moon Landing Regions</a> (28 oct 2024) y el <a href="https://www.nasa.gov/news-release/nasa-identifies-candidate-regions-for-landing-next-americans-on-moon/" target="_blank" rel="noopener">anuncio de regiones candidatas</a> (19 ago 2022).</li>
       <li><b>Referencias de viaje y distancia</b> — <a href="https://www.nasa.gov/history/apollo-11-mission-overview/" target="_blank" rel="noopener">NASA Apollo 11 Mission Overview</a>; <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html" target="_blank" rel="noopener">NASA Moon Fact Sheet</a> (perigeo medio 363.300 km, apogeo medio 405.500 km).</li>
+      <li><b>Sitios de referencia</b> — LCROSS: Marshall et al. (2011), <a href="https://doi.org/10.1007/s11214-011-9765-0" target="_blank" rel="noopener">Space Sci. Rev.</a>; IM-2: <a href="https://lroc.im-ldi.com/images/1408" target="_blank" rel="noopener">LROC</a>; IM-1: <a href="https://www.nasa.gov/missions/lro/nasas-lro-images-intuitive-machines-odysseus-lander/" target="_blank" rel="noopener">NASA</a>; Chandrayaan-3: <a href="https://www.hou.usra.edu/meetings/lpsc2025/pdf/1951.pdf" target="_blank" rel="noopener">LPSC 2025 #1951</a>; Chang'e-6: <a href="https://www.nasa.gov/centers-and-facilities/goddard/nasas-lro-spots-chinas-change-6-spacecraft-on-lunar-far-side/" target="_blank" rel="noopener">NASA</a>.</li>
       <li><b>Literatura de iluminación</b> — Mazarico, E. et al. (2011), <i>Illumination conditions of the lunar polar regions using LOLA topography</i>, Icarus 211, 1066–1081.</li>
       <li><b>Software</b> — <a href="https://rhodesmill.org/skyfield/" target="_blank" rel="noopener">Skyfield</a>, NumPy, Pillow. La página es HTML, CSS y JavaScript simples, sin servicios externos.</li>
     </ul>
@@ -105,6 +111,11 @@ window.POLEWINDOW_I18N = {
       plNone: "No period with both the Sun and Earth in view in this range.", plLoading: "Loading hourly data…",
       plWindow: "Sun + Earth window (UTC)", plDepart: "Depart Earth", plTransit: "3–4.5 day transit",
       plDistDep: "Earth–Moon at departure: {a}–{b} km", plDist: "Earth–Moon distance at arrival", plOpen: "already open at range start",
+      propNone: "No grid point meets the conditions (Sun, Earth, slope under 10° and filters) in this range.",
+      propWhy: "Best score for {range} ({method} horizon): the Sun and Earth are both in view {b}% of the time (Sun {s}%, Earth {e}%) on a {sl}° slope (LOLA, 240 m)",
+      propPenalty: ", with a {p}-point slope penalty",
+      propFilt: "(active filters applied)", propShowMap: "Show on map", propShowTl: "Show timeline",
+      refOutside: "Outside the LOLA 75°S terrain map: spherical horizon only.", refOffMap: "outside the ±200 km map", source: "Source",
       unsuitShadow: "Not suitable: permanent shadow – no Sun or Earth contact",
       unsuitNoBoth: "Not suitable: no simultaneous Sun and Earth",
       notRanked: "Not ranked in this range and model",
@@ -141,6 +152,11 @@ window.POLEWINDOW_I18N = {
       plNone: "No hay períodos con el Sol y la Tierra a la vista en este rango.", plLoading: "Cargando datos horarios…",
       plWindow: "Ventana Sol + Tierra (UTC)", plDepart: "Salida desde la Tierra", plTransit: "viaje de 3–4,5 días",
       plDistDep: "Tierra–Luna al salir: {a}–{b} km", plDist: "Distancia Tierra–Luna al llegar", plOpen: "ya abierta al inicio del rango",
+      propNone: "Ningún punto de la grilla cumple las condiciones (Sol, Tierra, pendiente bajo 10° y filtros) en este rango.",
+      propWhy: "Mejor puntaje para {range} (modelo {method}): tiene el Sol y la Tierra a la vista al mismo tiempo el {b}% del tiempo (Sol {s}%, Tierra {e}%) con una pendiente de {sl}° (LOLA, 240 m)",
+      propPenalty: ", con una penalización de {p} puntos por pendiente",
+      propFilt: "(con los filtros activos)", propShowMap: "Ver en el mapa", propShowTl: "Ver línea de tiempo",
+      refOutside: "Fuera del mapa de relieve LOLA de 75°S: solo horizonte esférico.", refOffMap: "fuera del mapa de ±200 km", source: "Fuente",
       unsuitShadow: "No apto: sombra permanente, sin Sol ni contacto con la Tierra",
       unsuitNoBoth: "No apto: sin Sol y Tierra a la vez",
       notRanked: "Sin ranking en este rango y modelo",
