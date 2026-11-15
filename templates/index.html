@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PoleWindow — Lunar Landing Site Navigator</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="hero">
+    <p class="kicker">NASA Space Apps Challenge 2026 · Lunar Landing Site Navigator</p>
+    <h1>PoleWindow</h1>
+    <p class="lede">
+      Compare lunar south-pole landing sites and date ranges. See when the Sun is
+      above the horizon (solar-power window) and when Earth is above the horizon
+      (direct-to-Earth communications window).
+    </p>
+  </header>
+
+  <main>
+    <section class="notice" role="note">
+      <strong>Limitation:</strong> elevations use a smooth spherical lunar horizon.
+      Local LOLA topography (crater walls and ridgelines) is not applied, so a low
+      Sun or Earth may be hidden in reality. Crater-floor centers will look more
+      sunlit than they really are.
+    </section>
+
+    <form id="controls" class="panel">
+      <fieldset>
+        <legend>Sites</legend>
+        <div class="site-list" id="site-list">
+          {% for site in sites %}
+          <label class="site-item">
+            <input type="checkbox" name="site_ids" value="{{ site.id }}" checked>
+            <span>
+              <strong>{{ site.name }}</strong>
+              <span class="coords">{{ site.lat }}°, {{ site.lon_e }}° E</span>
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+
+      <div class="row">
+        <label>Start date (UTC)
+          <input type="date" id="start" name="start" value="2027-01-01" required>
+        </label>
+        <label>End date (UTC)
+          <input type="date" id="end" name="end" value="2027-03-31" required>
+        </label>
+      </div>
+
+      <fieldset>
+        <legend>Custom coordinates (optional)</legend>
+        <div class="row">
+          <label>Latitude (deg)
+            <input type="number" id="custom-lat" name="lat" step="0.00001" min="-90" max="90" placeholder="-89.5">
+          </label>
+          <label>Longitude east (deg)
+            <input type="number" id="custom-lon" name="lon_e" step="0.00001" min="-180" max="360" placeholder="0">
+          </label>
+          <label>Label
+            <input type="text" id="custom-name" name="custom_name" placeholder="Custom site">
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="actions">
+        <button type="submit" id="compute-btn">Compare windows</button>
+        <p id="status" class="status" aria-live="polite"></p>
+      </div>
+    </form>
+
+    <section id="results" class="results" hidden>
+      <h2>Ranking</h2>
+      <p class="hint" id="span-label"></p>
+      <div class="table-wrap">
+        <table id="ranking-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Site</th>
+              <th>Sun (center)</th>
+              <th>Earth (center)</th>
+              <th>Both (center)</th>
+              <th>Sun (limb)</th>
+              <th>Earth (limb)</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="hint">
+        Center: geometric center above a spherical horizon. Limb: upper limb
+        (center plus apparent semidiameter) above the horizon. Ranking is by the
+        combined center window (Sun and Earth both up).
+      </p>
+
+      <h2>Elevation vs time</h2>
+      <label class="chart-select">Site to plot
+        <select id="chart-site"></select>
+      </label>
+      <canvas id="elev-chart" height="140"></canvas>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      Geometry from JPL DE421 and the MOON_ME_DE421 lunar frame, computed with
+      Skyfield and cross-checked against NASA JPL Horizons.
+      Coordinate sources are cited in the project README.
+      MIT License © 2026 José Ignacio García Ojeda.
+    </p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

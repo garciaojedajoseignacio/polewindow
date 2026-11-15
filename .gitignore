@@ -1,0 +1,12 @@
+# JPL kernel binaries (large; Skyfield can download them into data/)
+data/*.bsp
+data/*.bpc
+
+# Python environments and bytecode
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.Python
