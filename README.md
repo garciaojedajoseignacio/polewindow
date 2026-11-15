@@ -157,7 +157,9 @@ Full year 2027, terrain horizon: **84.162°S, 28.30°E** (LOLA elevation 4,912 m
 
 ### Reference sites
 
-Past landings/impacts with published coordinates (`scripts/refs.py` → `docs/data/refs.json`, `refs.bin`), drawn as cyan diamonds (toggle "Reference sites"):
+Past soft landings and impacts (`scripts/refs.py` → `docs/data/refs.json`, `refs.bin`). Soft landings are cyan diamonds; impacts are an orange burst. A yellow "?" badge marks an estimated coordinate. Toggle "Reference sites" to show or hide them on the map.
+
+Sites with published coordinates (full-year 2027; the site recomputes them for any range):
 
 | Site | Coordinates | Source | Model | Sun % | Earth % | Both % | Slope |
 |---|---|---|---|---|---|---|---|
@@ -167,7 +169,15 @@ Past landings/impacts with published coordinates (`scripts/refs.py` → `docs/da
 | Chandrayaan-3 Vikram, Statio Shiv Shakti (2023-08-23) | 69.373°S, 32.319°E | [LPSC 2025 #1951](https://www.hou.usra.edu/meetings/lpsc2025/pdf/1951.pdf) | spherical only (outside LOLA 75°S) | 48.6 | 100 | 48.6 | — |
 | Chang'e-6, Apollo basin far side (2024-06-01) | 41.6385°S, 153.9852°W | [NASA](https://www.nasa.gov/centers-and-facilities/goddard/nasas-lro-spots-chinas-change-6-spacecraft-on-lunar-far-side/) + CNSA via The Innovation (2024) | spherical only | 51.4 | 0 | 0 | — |
 
-Values are full-year 2027; the site recomputes them for any range. Our LOLA slope at IM-1 (12.5°) agrees with NASA's reported ~12° local slope; LCROSS (a PSR impact target) correctly gets 0 % Sun. Luna-25 (crashed) and the Artemis III regions (no published coordinates) are not included.
+Historical impacts on the south polar map with only an estimated coordinate (no Sun, Earth or slope figures; not a candidate, not in the ranking):
+
+| Site | Approximate coordinates | Source |
+|---|---|---|
+| LCROSS shepherding spacecraft, Cabeus (2009-10-09) | ~84.719°S, 310.39°E | Same Marshall et al. reconstruction as the Centaur; crater not easily observed in permanent shadow. [Space Sci. Rev.](https://doi.org/10.1007/s11214-011-9765-0) |
+| Lunar Prospector impact, Shoemaker (1999-07-31) | ~87.7°S, 42.0°E | [NASA Science](https://science.nasa.gov/mission/lunar-prospector/); [NSSDCA](https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html). LROC has not published a confirmed crater. |
+| Chandrayaan-1 Moon Impact Probe, Shackleton area (2008-11-14) | ~89°S, 330°E (30°W) | [NSSDCA](https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html) (note t: exact coordinates unknown) |
+
+Our LOLA slope at IM-1 (12.5°) agrees with NASA's reported ~12° local slope; the LCROSS Centaur (a PSR impact target) correctly gets 0 % Sun. Off-map crashes such as Luna-25, and the Artemis III regions (no published coordinates), are not included.
 
 ## Regenerating the demo data
 

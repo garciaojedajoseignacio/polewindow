@@ -140,6 +140,19 @@ tr.sep:hover{background:none}
 .reflist li{padding:6px 0;border-bottom:1px solid var(--line);cursor:pointer}
 .reflist li:hover b{color:var(--acc)}
 .refkey{color:#7cf0ff}
+.refkey.impact{color:#ff8a4a}
 .ref{cursor:pointer}
-.ref text{fill:#bff7ff;paint-order:stroke;stroke:#0b0e14;pointer-events:none}
+.ref text.lbl{fill:#bff7ff;paint-order:stroke;stroke:#0b0e14;pointer-events:none}
+.ref.impact text.lbl{fill:#ffd0b0}
+.ref text.qmark{fill:#ffd166;paint-order:stroke;stroke:#0b0e14;pointer-events:none;font-family:system-ui,sans-serif}
+.ref.sel path.landing{stroke:#fff}
+.ref.sel path.impact{stroke:#fff}
+.ref.sel circle.qbadge{stroke:#fff}
 .star{cursor:pointer}
+.symleg{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:6px 0 2px;font-size:12px;color:var(--mut)}
+.symleg .cat{display:inline-flex;align-items:center;gap:6px}
+.symleg svg{width:16px;height:16px;flex:0 0 auto;display:block}
+.approxtag{display:inline-block;margin-top:3px;padding:3px 8px;border-radius:8px;line-height:1.35;background:#2a2410;color:#ffd166;border:1px solid #5c4a16;font-size:11.5px;white-space:normal}
+.histbox{margin:8px 0 0;padding:10px 12px;border-radius:8px;background:#2a2410;color:#ffd58a;font-size:13.5px;border:1px solid #5c4a16}
+.reflist li.approx{cursor:pointer}
+@media (max-width:560px){.symleg{gap:6px 12px;font-size:11.5px}.symleg svg{width:14px;height:14px}}

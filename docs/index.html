@@ -94,6 +94,12 @@
       <div id="tip" class="tip" hidden></div>
     </div>
     <div class="legend"><span id="legLo">0%</span><div id="legBar" class="bar"></div><span id="legHi">100%</span><span id="legLabel" class="muted"></span></div>
+    <div class="symleg" id="symLegend">
+      <span class="cat"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2L14 8L8 14L2 8Z" fill="#0b0e14" stroke="#7cf0ff" stroke-width="1.6"/></svg><span data-i18n="legLanding">Soft landing</span></span>
+      <span class="cat"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1L9.15 5.35L13.41 2.59L10.65 6.85L15 8L10.65 9.15L13.41 13.41L9.15 10.65L8 15L6.85 10.65L2.59 13.41L5.35 9.15L1 8L5.35 6.85L2.59 2.59L6.85 5.35Z" fill="#2a1408" stroke="#ff8a4a" stroke-width="1.2"/></svg><span data-i18n="legImpact">Impact</span></span>
+      <span class="cat"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="#0b0e14" stroke="#ffd166" stroke-width="1.4"/><text x="8" y="11.2" text-anchor="middle" font-size="9" font-weight="700" fill="#ffd166" font-family="system-ui,sans-serif">?</text></svg><span data-i18n="legApprox">Approximate coordinate</span></span>
+      <span class="cat"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.2L9.7 5.8L14.7 6.1L10.7 9.2L12.2 14L8 11.5L3.8 14L5.3 9.2L1.3 6.1L6.3 5.8Z" fill="#ffd166" stroke="#0b0e14" stroke-width="1"/></svg><span data-i18n="legProposed">Proposed site</span></span>
+    </div>
     <p class="muted small" data-i18n="mapNote">Click anywhere on the map to see that point's values and timeline. South polar stereographic projection, 0°E up, 90°E right, ±200 km around the pole (or ±40 km in pole zoom). Relief: LRO LOLA LDEM_75S_240M (shading illustrative, not real lighting).</p>
   </section>
 
@@ -106,9 +112,9 @@
     </section>
 
     <section class="card">
-      <h2><span data-i18n="refTitle">Reference sites</span> <span class="refkey">◆</span></h2>
+      <h2><span data-i18n="refTitle">Reference sites</span> <span class="refkey">◆</span> <span class="refkey impact">✸</span></h2>
       <ul id="refList" class="reflist"></ul>
-      <p class="muted small" data-i18n="refNote">Past landing and impact sites with published coordinates (sources in each detail view). Values use the selected range and model; sites outside the LOLA 75°S map use the spherical horizon.</p>
+      <p class="muted small" data-i18n="refNote">Past soft landings and impacts (sources in each detail view). Sites with published coordinates show Sun, Earth and slope for the selected range and model; sites outside the LOLA 75°S map use the spherical horizon. Impacts with only an estimated coordinate are labeled as historical references and do not include computed figures.</p>
     </section>
 
     <section class="card">
@@ -148,7 +154,7 @@
     </div>
     <p id="dMeta" class="muted small"></p>
     <div class="stats" id="dStats"></div>
-    <figure>
+    <figure id="dBandsFig">
       <figcaption data-i18n="tlCap">Timeline in the selected range (hover or tap for date and time, UTC)</figcaption>
       <div class="bands big" id="dBands"><canvas></canvas><div class="btip" hidden></div></div>
     </figure>
@@ -178,7 +184,7 @@
       <li><b>Distance to a permanently shadowed region (PSR).</b> We mark as a PSR proxy every grid point where the Sun's center never rises above the LOLA horizon during the whole year (<span class="nPsr">—</span> points), and report the distance to the nearest one. This is at grid resolution (1.5 km near the pole, 6 km farther out), not an official PSR map.</li>
       <li><b>Launch window planner.</b> For a site or point, the three longest Sun + Earth periods in the selected range, the Earth departure dates that would put a crew there at the start (window start minus 3 to 4.5 days of transit) and the Earth–Moon distance (JPL DE421). Simplified planning estimate, not a trajectory design.</li>
       <li><b>Proposed site.</b> For the selected range and model, the grid point with the highest score = Sun + Earth % minus 1 point per degree of LOLA slope above 5°, among points with Sun &gt; 0, Earth &gt; 0, Sun + Earth &gt; 0 and slope under 10° (and any active filters). Ties go to more Sun, then lower slope.</li>
-      <li><b>Reference sites.</b> Past landings and impacts with published coordinates: LCROSS (Cabeus), IM-2 Athena, IM-1 Odysseus, Chandrayaan-3 and Chang'e-6. Sites south of 75.5°S get the terrain-aware computation; the others the spherical horizon only. Our LOLA slope at the IM-1 site (12.5°) matches NASA's reported ~12° local slope.</li>
+      <li><b>Reference sites.</b> Past soft landings and impacts. On the south polar map (south of 75°S): the LCROSS Centaur impact (published coordinates; terrain-aware values), the LCROSS shepherding spacecraft, Lunar Prospector and the Chandrayaan-1 Moon Impact Probe (the last three with approximate coordinates: historical reference only, no Sun, Earth or slope figures), plus the IM-2 Athena and IM-1 Odysseus soft landings (IM-1 lies outside the ±200 km frame). Off the map: Chandrayaan-3 and Chang'e-6, spherical horizon only. Soft landings south of 75.5°S and the LCROSS Centaur use the terrain-aware computation. Our LOLA slope at the IM-1 site (12.5°) matches NASA's reported ~12° local slope.</li>
       <li><b>Grid and date ranges.</b> <span class="gridN">—</span> points: 1.5 km spacing within 36 km of the pole, 6 km spacing out to 84°S. The hourly visibility of every point is stored compactly (run-length encoded) and all statistics for a chosen date range are recomputed in your browser.</li>
     </ol>
     <h3>Validation</h3>
@@ -212,11 +218,11 @@
       <li><b>LRO LOLA slope</b> — gridded bidirectional slope <code>LDSM_75S_240M</code> (LRO-L-LOLA-4-GDR-V1.0), same <a href="https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/" target="_blank" rel="noopener">PDS Geosciences directory</a>. NASA data, public domain.</li>
       <li><b>Artemis III regions</b> — NASA, <a href="https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/" target="_blank" rel="noopener">NASA Provides Update on Artemis III Moon Landing Regions</a> (28 Oct 2024) and <a href="https://www.nasa.gov/news-release/nasa-identifies-candidate-regions-for-landing-next-americans-on-moon/" target="_blank" rel="noopener">candidate regions release</a> (19 Aug 2022).</li>
       <li><b>Transit and distance references</b> — <a href="https://www.nasa.gov/history/apollo-11-mission-overview/" target="_blank" rel="noopener">NASA Apollo 11 Mission Overview</a>; <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html" target="_blank" rel="noopener">NASA Moon Fact Sheet</a> (mean perigee 363,300 km, mean apogee 405,500 km).</li>
-      <li><b>Reference sites</b> — LCROSS: Marshall et al. (2011), <a href="https://doi.org/10.1007/s11214-011-9765-0" target="_blank" rel="noopener">Space Sci. Rev.</a>; IM-2: <a href="https://lroc.im-ldi.com/images/1408" target="_blank" rel="noopener">LROC</a>; IM-1: <a href="https://www.nasa.gov/missions/lro/nasas-lro-images-intuitive-machines-odysseus-lander/" target="_blank" rel="noopener">NASA</a>; Chandrayaan-3: <a href="https://www.hou.usra.edu/meetings/lpsc2025/pdf/1951.pdf" target="_blank" rel="noopener">LPSC 2025 #1951</a>; Chang'e-6: <a href="https://www.nasa.gov/centers-and-facilities/goddard/nasas-lro-spots-chinas-change-6-spacecraft-on-lunar-far-side/" target="_blank" rel="noopener">NASA</a>.</li>
+      <li><b>Reference sites</b> — LCROSS Centaur and shepherd (estimated): Marshall et al. (2011/2012), <a href="https://doi.org/10.1007/s11214-011-9765-0" target="_blank" rel="noopener">Space Sci. Rev.</a>; Lunar Prospector (estimated): <a href="https://science.nasa.gov/mission/lunar-prospector/" target="_blank" rel="noopener">NASA Science</a> and <a href="https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html" target="_blank" rel="noopener">NSSDCA</a>; Chandrayaan-1 MIP (estimated; exact coordinates unknown): <a href="https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html" target="_blank" rel="noopener">NSSDCA</a>; IM-2: <a href="https://lroc.im-ldi.com/images/1408" target="_blank" rel="noopener">LROC</a>; IM-1: <a href="https://www.nasa.gov/missions/lro/nasas-lro-images-intuitive-machines-odysseus-lander/" target="_blank" rel="noopener">NASA</a>; Chandrayaan-3: <a href="https://www.hou.usra.edu/meetings/lpsc2025/pdf/1951.pdf" target="_blank" rel="noopener">LPSC 2025 #1951</a>; Chang'e-6: <a href="https://www.nasa.gov/centers-and-facilities/goddard/nasas-lro-spots-chinas-change-6-spacecraft-on-lunar-far-side/" target="_blank" rel="noopener">NASA</a>.</li>
       <li><b>Illumination literature</b> — Mazarico, E. et al. (2011), <i>Illumination conditions of the lunar polar regions using LOLA topography</i>, Icarus 211, 1066–1081.</li>
       <li><b>Software</b> — <a href="https://rhodesmill.org/skyfield/" target="_blank" rel="noopener">Skyfield</a>, NumPy, Pillow. The page itself is plain HTML, CSS and JavaScript with no external services.</li>
     </ul>
-    <p class="muted small">Precomputed data: <a href="data/sites.json">sites.json</a> · <a href="data/grid.json">grid.json</a> · <a href="data/hourly.bin">hourly.bin</a> · <a href="data/extras.json">extras.json</a>. Regenerate with <code>python scripts/precompute.py --validate</code> and <code>python scripts/extras.py</code> (see README).</p>
+    <p class="muted small">Precomputed data: <a href="data/sites.json">sites.json</a> · <a href="data/grid.json">grid.json</a> · <a href="data/hourly.bin">hourly.bin</a> · <a href="data/extras.json">extras.json</a> · <a href="data/refs.json">refs.json</a> · <a href="data/refs.bin">refs.bin</a>. Regenerate with <code>python scripts/precompute.py --validate</code>, <code>python scripts/extras.py</code> and <code>python scripts/refs.py</code> (see README).</p>
   </section>
 
   <section class="card wide prose" id="about" data-i18n-html="about">

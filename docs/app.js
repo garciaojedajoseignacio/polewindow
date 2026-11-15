@@ -299,16 +299,66 @@
     }
     g.setAttribute("pointer-events", "none");
   }
+  function burstPath(x, y, R, r, n) {
+    let d = "";
+    const N = n * 2;
+    for (let k = 0; k < N; k++) {
+      const a = (Math.PI / n) * k - Math.PI / 2, rr = k % 2 ? r : R;
+      d += (k ? "L" : "M") + (x + rr * Math.cos(a)).toFixed(2) + " " + (y + rr * Math.sin(a)).toFixed(2);
+    }
+    return d + "Z";
+  }
+  function placeRefMarkers() {
+    const min = 11 * K;
+    const items = [];
+    REFS.forEach((r, k) => {
+      if (!r.in_map) return;
+      items.push({ k, tx: r.x_km, ty: -r.y_km, x: r.x_km, y: -r.y_km });
+    });
+    for (let i = 0; i < items.length; i++) {
+      for (let j = i + 1; j < items.length; j++) {
+        const a = items[i], b = items[j];
+        let dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+        if (d >= min) continue;
+        const ux = d < 1e-6 ? 1 : dx / d, uy = d < 1e-6 ? 0 : dy / d;
+        const push = (min - d) / 2;
+        a.x -= ux * push; a.y -= uy * push;
+        b.x += ux * push; b.y += uy * push;
+      }
+    }
+    return items;
+  }
+  function drawRefIcon(grp, r, x, y) {
+    el("circle", { cx: x, cy: y, r: 8 * K, fill: "transparent", stroke: "none" }, grp);
+    if (r.kind === "impact") {
+      el("path", { class: "impact", d: burstPath(x, y, 4.2 * K, 1.6 * K, 8), fill: "#2a1408", stroke: "#ff8a4a", "stroke-width": 0.8 * K }, grp);
+      if (r.exact === false) {
+        const bx = x + 4.4 * K, by = y - 4.4 * K;
+        el("circle", { class: "qbadge", cx: bx, cy: by, r: 2.7 * K, fill: "#0b0e14", stroke: "#ffd166", "stroke-width": 0.7 * K }, grp);
+        const qt = el("text", { class: "qmark", x: bx, y: by + 1.2 * K, "text-anchor": "middle", "font-size": 3.7 * K, "font-weight": "700", style: `stroke-width:${0.7 * K}px` }, grp);
+        qt.textContent = "?";
+      }
+    } else {
+      const d = 3.2 * K;
+      el("path", { class: "landing", d: `M${x} ${y - d}L${x + d} ${y}L${x} ${y + d}L${x - d} ${y}Z`, fill: "#0b0e14", stroke: "#7cf0ff", "stroke-width": 0.9 * K }, grp);
+    }
+  }
   function drawRefs() {
     const g = $("#reflayer");
     g.innerHTML = "";
     if (!REFS || !$("#refLayer").checked) return;
-    REFS.forEach((r, k) => {
-      if (!r.in_map) return;
-      const grp = el("g", { class: "ref" + (state.target === "ref" && state.ref === k ? " sel" : "") }, g);
-      const x = r.x_km, y = -r.y_km, d = 3.2 * K;
-      el("path", { d: `M${x} ${y - d}L${x + d} ${y}L${x} ${y + d}L${x - d} ${y}Z`, fill: "#0b0e14", stroke: "#7cf0ff", "stroke-width": 0.9 * K }, grp);
-      el("text", { x: x + 4.5 * K, y: y + 2 * K, "font-size": 5.5 * K, style: `stroke-width:${1.5 * K}px` }, grp).textContent = refName(r).replace(/\s*\(.*\)/, "");
+    placeRefMarkers().forEach((p) => {
+      const r = REFS[p.k], k = p.k;
+      const cls = "ref" + (r.kind === "impact" ? " impact" : " landing") + (r.exact === false ? " approx" : "") + (state.target === "ref" && state.ref === k ? " sel" : "");
+      const grp = el("g", { class: cls }, g);
+      if (Math.hypot(p.x - p.tx, p.y - p.ty) > 0.8) {
+        el("line", { x1: p.tx, y1: p.ty, x2: p.x, y2: p.y, stroke: r.kind === "impact" ? "#ff8a4a" : "#7cf0ff", "stroke-width": 0.45 * K, opacity: 0.85 }, grp);
+        el("circle", { cx: p.tx, cy: p.ty, r: 1.1 * K, fill: r.kind === "impact" ? "#ff8a4a" : "#7cf0ff" }, grp);
+      }
+      drawRefIcon(grp, r, p.x, p.y);
+      const lp = r.label || [4.5, 2, "start"];
+      const lbl = el("text", { class: "lbl", x: p.x + lp[0] * K, y: p.y + lp[1] * K, "text-anchor": lp[2], "font-size": 5.5 * K, style: `stroke-width:${1.5 * K}px` }, grp);
+      lbl.textContent = refShort(r);
       grp.addEventListener("click", (ev) => { ev.stopPropagation(); selectRef(k, true); });
     });
   }
@@ -601,9 +651,22 @@
 
   /* ------------------------------------------------------------ reference sites */
   const refName = (r) => (state.lang === "es" && r.name_es) || r.name;
+  const refShort = (r) => (state.lang === "es" && r.short_es) || r.short || refName(r).replace(/\s*\(.*\)/, "");
+  const refApprox = (r) => r && r.exact === false;
+  const refPrefix = (r) => (r.kind === "impact" ? (refApprox(r) ? "✸?" : "✸") : "◆");
+  function refLatLon(r) {
+    const d = r.coord_decimals || [3, 2];
+    const lon = ((r.lon_e % 360) + 360) % 360;
+    return (refApprox(r) ? "~" : "") + `${fmt(Math.abs(r.lat), d[0])}°S, ${fmt(lon, d[1])}°E`;
+  }
+  function refBinIndex(r, k) {
+    return r.bin_index != null ? r.bin_index : (refApprox(r) ? null : k);
+  }
   function refStats(k, m = state.method) {
     const r = REFS[k];
-    if (BIN && RSTORE) return entryStats(REF_BASE + k, r.terrain ? m : "s", state.a, state.b);
+    if (refApprox(r)) return null;
+    const idx = refBinIndex(r, k);
+    if (BIN && RSTORE && idx != null) return entryStats(REF_BASE + idx, r.terrain ? m : "s", state.a, state.b);
     return m === "t" && r.terrain ? r.terrain_stats : r.spherical;
   }
   function drawRefList() {
@@ -611,8 +674,14 @@
     if (!REFS) return;
     ul.innerHTML = "";
     REFS.forEach((r, k) => {
-      const st = refStats(k), li = document.createElement("li");
-      li.innerHTML = `<b>${refName(r)}</b> <span class="muted small">· ${r.date}</span><br><span class="small">${t("kBoth")} ${fmt(st.both_pct, 1)}% · ${t("kSun")} ${fmt(st.sun_pct, 1)}% · ${t("kEarth")} ${fmt(st.earth_pct, 1)}%${r.slope_deg != null ? " · " + slopeBadge(r.slope_deg) : ""}</span>${r.terrain ? "" : `<br><span class="muted small">${t("refOutside")}</span>`}${r.in_map ? "" : `<span class="muted small"> · ${t("refOffMap")}</span>`}`;
+      const li = document.createElement("li");
+      if (refApprox(r)) {
+        li.className = "approx";
+        li.innerHTML = `<b>${refPrefix(r)} ${refName(r)}</b> <span class="muted small">· ${r.date}</span><br><span class="approxtag">${t("refApprox")}</span>${r.in_map ? "" : `<span class="muted small"> · ${t("refOffMap")}</span>`}`;
+      } else {
+        const st = refStats(k);
+        li.innerHTML = `<b>${refPrefix(r)} ${refName(r)}</b> <span class="muted small">· ${r.date}</span><br><span class="small">${t("kBoth")} ${fmt(st.both_pct, 1)}% · ${t("kSun")} ${fmt(st.sun_pct, 1)}% · ${t("kEarth")} ${fmt(st.earth_pct, 1)}%${r.slope_deg != null ? " · " + slopeBadge(r.slope_deg) : ""}</span>${r.terrain ? "" : `<br><span class="muted small">${t("refOutside")}</span>`}${r.in_map ? "" : `<span class="muted small"> · ${t("refOffMap")}</span>`}`;
+      }
       li.addEventListener("click", () => selectRef(k, true));
       ul.appendChild(li);
     });
@@ -677,7 +746,7 @@
     sel.innerHTML = "";
     S.sites.forEach((s) => { const o = document.createElement("option"); o.value = s.id; o.textContent = siteName(s, true); sel.appendChild(o); });
     if (state.pick != null) { const o = document.createElement("option"); o.value = "__pt"; o.textContent = t("selPoint"); sel.appendChild(o); }
-    if (REFS) REFS.forEach((r, k) => { const o = document.createElement("option"); o.value = "__ref" + k; o.textContent = "◆ " + refName(r); sel.appendChild(o); });
+    if (REFS) REFS.forEach((r, k) => { const o = document.createElement("option"); o.value = "__ref" + k; o.textContent = refPrefix(r) + " " + refName(r); sel.appendChild(o); });
     sel.value = state.target === "point" ? "__pt" : state.target === "ref" ? "__ref" + state.ref : state.site;
   }
   function drawDetail() {
@@ -686,11 +755,25 @@
     const isPt = !isRef && state.target === "point" && state.pick != null;
     let st, so, entry, xs;
     const card = (l, v, sub) => `<div class="stat"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`;
+    $("#dStats").hidden = false;
+    if ($("#dBandsFig")) $("#dBandsFig").hidden = false;
+    if ($("#planner")) $("#planner").hidden = false;
     if (isRef) {
       const k = state.ref, r = REFS[k];
-      entry = REF_BASE + k;
-      $("#dName").textContent = "◆ " + refName(r);
-      $("#dMeta").innerHTML = `${latlonText(r.lat, r.lon_e)} · ${r.mission} · ${r.date}<br>${r.outcome[state.lang] || r.outcome.en}<br>${t("source")}: <a href="${r.url}" target="_blank" rel="noopener">${r.source}</a>${r.terrain ? "" : `<br><b>${t("refOutside")}</b>`}`;
+      $("#dName").textContent = refPrefix(r) + " " + refName(r);
+      $("#dMeta").innerHTML = `${refLatLon(r)} · ${r.mission} · ${r.date}<br>${r.outcome[state.lang] || r.outcome.en}<br>${t("source")}: <a href="${r.url}" target="_blank" rel="noopener">${r.source}</a>${refApprox(r) || r.terrain ? "" : `<br><b>${t("refOutside")}</b>`}`;
+      if (refApprox(r)) {
+        $("#dStats").hidden = true;
+        $("#dStats").innerHTML = "";
+        if ($("#dBandsFig")) $("#dBandsFig").hidden = true;
+        if ($("#planner")) $("#planner").hidden = true;
+        $("#dSlopeNote") && $("#dSlopeNote").remove();
+        $("#dMeta").insertAdjacentHTML("afterend", `<div id="dSlopeNote"><div class="histbox"><b>${t("refApprox")}</b><br>${t("refHistNote")}</div></div>`);
+        $("#hzFig").hidden = true;
+        $("#hzNone").hidden = true;
+        return;
+      }
+      entry = REF_BASE + refBinIndex(r, k);
       st = refStats(k); so = refStats(k, state.method === "t" ? "s" : "t");
       xs = { slope: r.slope_deg, psr: r.psr_km, self: r.psr_km === 0 };
     } else if (isPt) {
