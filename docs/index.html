@@ -41,6 +41,12 @@
     <span id="loadState" class="pill warn" data-i18n="loading">Loading hourly data…</span>
   </section>
 
+  <section class="card wide propcard" id="proposed">
+    <h2><span data-i18n="propTitle">Proposed site</span> <span class="pill methodPill">terrain</span></h2>
+    <div id="propBody" class="muted" data-i18n="loading2">Loading…</div>
+    <p class="muted small" data-i18n-html="propRule">How it is chosen: among grid points with Sun &gt; 0, Earth &gt; 0, Sun + Earth &gt; 0 and LOLA slope under 10° (plus any active filters), the highest score = Sun + Earth % minus 1 point per degree of slope above 5°. Ties go to more Sun, then lower slope. A starting point for study, not a landing recommendation.</p>
+  </section>
+
   <section class="card mapcard">
     <div class="controls">
       <div class="seg" role="group" aria-label="Horizon model">
@@ -61,6 +67,7 @@
       </div>
       <label class="chk"><input type="checkbox" id="heat" checked> <span data-i18n="heat">Heat map</span></label>
       <label class="chk"><input type="checkbox" id="psrLayer"> <span data-i18n="psrLayer">PSR proxy</span></label>
+      <label class="chk"><input type="checkbox" id="refLayer" checked> <span data-i18n="refLayer">Reference sites</span></label>
     </div>
     <div class="filters">
       <span class="ftitle" data-i18n="fTitle">Filters</span>
@@ -79,7 +86,9 @@
         <g id="heatlayer"></g>
         <g id="graticule"></g>
         <g id="psrlayer" style="display:none"></g>
+        <g id="reflayer"></g>
         <g id="sitelayer"></g>
+        <g id="starlayer"></g>
         <g id="picklayer"></g>
       </svg>
       <div id="tip" class="tip" hidden></div>
@@ -94,6 +103,12 @@
       <div id="pickBody" class="muted" data-i18n="pickEmpty">Click the map to choose any location between 84°S and the pole.</div>
       <div class="bands" id="pickBands" hidden><canvas></canvas><div class="btip" hidden></div></div>
       <button id="pickOpen" class="linkbtn" hidden data-i18n="pickOpen">Open full detail ↓</button>
+    </section>
+
+    <section class="card">
+      <h2><span data-i18n="refTitle">Reference sites</span> <span class="refkey">◆</span></h2>
+      <ul id="refList" class="reflist"></ul>
+      <p class="muted small" data-i18n="refNote">Past landing and impact sites with published coordinates (sources in each detail view). Values use the selected range and model; sites outside the LOLA 75°S map use the spherical horizon.</p>
     </section>
 
     <section class="card">
@@ -162,6 +177,8 @@
       <li><b>Slope.</b> From the official LOLA gridded slope map <code>LDSM_75S_240M</code>, sampled at the nearest 240 m pixel. Per the product label, slopes come from plane fits to successive laser shots (baseline about 30–120 m) and are gridded at 240 m. Thresholds: under 5° ideal (green), 5–10° caution (amber), 10° or more is flagged "Warning: steep slope – not ideal for landing" (red).</li>
       <li><b>Distance to a permanently shadowed region (PSR).</b> We mark as a PSR proxy every grid point where the Sun's center never rises above the LOLA horizon during the whole year (<span class="nPsr">—</span> points), and report the distance to the nearest one. This is at grid resolution (1.5 km near the pole, 6 km farther out), not an official PSR map.</li>
       <li><b>Launch window planner.</b> For a site or point, the three longest Sun + Earth periods in the selected range, the Earth departure dates that would put a crew there at the start (window start minus 3 to 4.5 days of transit) and the Earth–Moon distance (JPL DE421). Simplified planning estimate, not a trajectory design.</li>
+      <li><b>Proposed site.</b> For the selected range and model, the grid point with the highest score = Sun + Earth % minus 1 point per degree of LOLA slope above 5°, among points with Sun &gt; 0, Earth &gt; 0, Sun + Earth &gt; 0 and slope under 10° (and any active filters). Ties go to more Sun, then lower slope.</li>
+      <li><b>Reference sites.</b> Past landings and impacts with published coordinates: LCROSS (Cabeus), IM-2 Athena, IM-1 Odysseus, Chandrayaan-3 and Chang'e-6. Sites south of 75.5°S get the terrain-aware computation; the others the spherical horizon only. Our LOLA slope at the IM-1 site (12.5°) matches NASA's reported ~12° local slope.</li>
       <li><b>Grid and date ranges.</b> <span class="gridN">—</span> points: 1.5 km spacing within 36 km of the pole, 6 km spacing out to 84°S. The hourly visibility of every point is stored compactly (run-length encoded) and all statistics for a chosen date range are recomputed in your browser.</li>
     </ol>
     <h3>Validation</h3>
@@ -195,6 +212,7 @@
       <li><b>LRO LOLA slope</b> — gridded bidirectional slope <code>LDSM_75S_240M</code> (LRO-L-LOLA-4-GDR-V1.0), same <a href="https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/" target="_blank" rel="noopener">PDS Geosciences directory</a>. NASA data, public domain.</li>
       <li><b>Artemis III regions</b> — NASA, <a href="https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/" target="_blank" rel="noopener">NASA Provides Update on Artemis III Moon Landing Regions</a> (28 Oct 2024) and <a href="https://www.nasa.gov/news-release/nasa-identifies-candidate-regions-for-landing-next-americans-on-moon/" target="_blank" rel="noopener">candidate regions release</a> (19 Aug 2022).</li>
       <li><b>Transit and distance references</b> — <a href="https://www.nasa.gov/history/apollo-11-mission-overview/" target="_blank" rel="noopener">NASA Apollo 11 Mission Overview</a>; <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html" target="_blank" rel="noopener">NASA Moon Fact Sheet</a> (mean perigee 363,300 km, mean apogee 405,500 km).</li>
+      <li><b>Reference sites</b> — LCROSS: Marshall et al. (2011), <a href="https://doi.org/10.1007/s11214-011-9765-0" target="_blank" rel="noopener">Space Sci. Rev.</a>; IM-2: <a href="https://lroc.im-ldi.com/images/1408" target="_blank" rel="noopener">LROC</a>; IM-1: <a href="https://www.nasa.gov/missions/lro/nasas-lro-images-intuitive-machines-odysseus-lander/" target="_blank" rel="noopener">NASA</a>; Chandrayaan-3: <a href="https://www.hou.usra.edu/meetings/lpsc2025/pdf/1951.pdf" target="_blank" rel="noopener">LPSC 2025 #1951</a>; Chang'e-6: <a href="https://www.nasa.gov/centers-and-facilities/goddard/nasas-lro-spots-chinas-change-6-spacecraft-on-lunar-far-side/" target="_blank" rel="noopener">NASA</a>.</li>
       <li><b>Illumination literature</b> — Mazarico, E. et al. (2011), <i>Illumination conditions of the lunar polar regions using LOLA topography</i>, Icarus 211, 1066–1081.</li>
       <li><b>Software</b> — <a href="https://rhodesmill.org/skyfield/" target="_blank" rel="noopener">Skyfield</a>, NumPy, Pillow. The page itself is plain HTML, CSS and JavaScript with no external services.</li>
     </ul>

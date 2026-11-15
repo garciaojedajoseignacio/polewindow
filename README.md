@@ -145,6 +145,30 @@ Example: Connecting Ridge, full year 2027 — longest Sun + Earth window 5 Nov 1
 
 Limitations: 240 m slopes are regional (landing-scale hazards need 5–20 m or finer DEMs and imagery); the PSR proxy misses small cold traps; the launch planner ignores launch-site geometry, vehicle performance and orbit design.
 
+### Proposed site
+
+For the selected date range and horizon model, the site picks one grid point (gold star):
+
+- candidates: Sun > 0 %, Earth > 0 %, Sun + Earth > 0 % and LOLA slope (LDSM, 240 m) under 10°, plus any active filters;
+- score = Sun + Earth % − 1 point per degree of slope above 5° (so 5–10° slopes are penalized);
+- ties: higher Sun %, then lower slope.
+
+Full year 2027, terrain horizon: **84.162°S, 28.30°E** (LOLA elevation 4,912 m, 6 km grid cell) — Sun + Earth 45.1 %, Sun 45.1 %, Earth 100 %, slope 2.1°, 48.4 km from the nearest PSR-proxy point; about 19 km from the IM-2 landing site on the Mons Mouton massif. With the spherical horizon the pick moves to 84.066°S, 358.09°E (39.6 %). It is a starting point for study (6 km cells away from the pole), not a landing recommendation.
+
+### Reference sites
+
+Past landings/impacts with published coordinates (`scripts/refs.py` → `docs/data/refs.json`, `refs.bin`), drawn as cyan diamonds (toggle "Reference sites"):
+
+| Site | Coordinates | Source | Model | Sun % | Earth % | Both % | Slope |
+|---|---|---|---|---|---|---|---|
+| LCROSS Centaur impact, Cabeus (2009-10-09) | 84.6796°S, 48.7093°W | Marshall et al. 2011, [Space Sci. Rev.](https://doi.org/10.1007/s11214-011-9765-0) | terrain | 0 | 15.2 | 0 | 2.8° |
+| IM-2 Athena, Mons Mouton (2025-03-06) | 84.7906°S, 29.1957°E | [LROC](https://lroc.im-ldi.com/images/1408) | terrain | 43.9 | 80.5 | 36.1 | 3.1° |
+| IM-1 Odysseus, near Malapert A (2024-02-22) | 80.13°S, 1.44°E | [NASA](https://www.nasa.gov/missions/lro/nasas-lro-images-intuitive-machines-odysseus-lander/) | terrain (off the ±200 km map) | 38.0 | 100 | 38.0 | 12.5° |
+| Chandrayaan-3 Vikram, Statio Shiv Shakti (2023-08-23) | 69.373°S, 32.319°E | [LPSC 2025 #1951](https://www.hou.usra.edu/meetings/lpsc2025/pdf/1951.pdf) | spherical only (outside LOLA 75°S) | 48.6 | 100 | 48.6 | — |
+| Chang'e-6, Apollo basin far side (2024-06-01) | 41.6385°S, 153.9852°W | [NASA](https://www.nasa.gov/centers-and-facilities/goddard/nasas-lro-spots-chinas-change-6-spacecraft-on-lunar-far-side/) + CNSA via The Innovation (2024) | spherical only | 51.4 | 0 | 0 | — |
+
+Values are full-year 2027; the site recomputes them for any range. Our LOLA slope at IM-1 (12.5°) agrees with NASA's reported ~12° local slope; LCROSS (a PSR impact target) correctly gets 0 % Sun. Luna-25 (crashed) and the Artemis III regions (no published coordinates) are not included.
+
 ## Regenerating the demo data
 
 ```bash
@@ -155,6 +179,7 @@ curl -o data/ldem_75s_240m.img https://pds-geosciences.wustl.edu/lro/lro-l-lola-
 python scripts/precompute.py --year 2027 --validate   # ~75 s on a laptop
 curl -o data/ldsm_75s_240m.img https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldsm_75s_240m.img
 python scripts/extras.py                              # slope, PSR distance, Earth-Moon distance
+python scripts/refs.py                                # reference landing/impact sites
 ```
 
 This writes `docs/data/sites.json`, `docs/data/grid.json` and `docs/assets/lola_hillshade.png`. `--validate` checks the vectorized Sun/Earth elevations against `compute.py` (Skyfield topocentric) for the five sites. To preview: `python -m http.server -d docs 8000`.

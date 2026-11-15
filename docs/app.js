@@ -12,7 +12,8 @@
   let S, G, X, K = 1, VMAX = 100, ORDER = [];
   const filt = { sun: 0, slope: 99, psr: 999 };
   const MEAN_PERIGEE = 363300, MEAN_APOGEE = 405500;
-  let BIN = null, OFF = null, NH = 8760, YEAR = 2027;
+  let BIN = null, OFF = null, NH = 8760, YEAR = 2027, REFS = null, RSTORE = null;
+  const REF_BASE = 100000;
   const gridCache = new Map();
 
   const $ = (s) => document.querySelector(s);
@@ -83,17 +84,22 @@
   }
 
   /* ------------------------------------------------------------ hourly data */
-  function parseBin(buf) {
-    BIN = new Uint16Array(buf);
-    const nEntries = BIN[0], nSeries = BIN[1];
-    NH = BIN[2];
-    OFF = new Uint32Array(nEntries * nSeries);
+  function parseStore(buf) {
+    const bin = new Uint16Array(buf), nEntries = bin[0], nSeries = bin[1];
+    const off = new Uint32Array(nEntries * nSeries);
     let p = 3;
-    for (let i = 0; i < nEntries * nSeries; i++) { OFF[i] = p; p += 2 + BIN[p]; }
+    for (let i = 0; i < nEntries * nSeries; i++) { off[i] = p; p += 2 + bin[p]; }
+    return { bin, off, nh: bin[2] };
+  }
+  function parseBin(buf) {
+    const st = parseStore(buf);
+    BIN = st.bin; OFF = st.off; NH = st.nh;
   }
   function series(entry, s) {
-    const p = OFF[entry * 4 + s], n = BIN[p];
-    return { init: BIN[p + 1], flips: BIN.subarray(p + 2, p + 2 + n) };
+    let bin = BIN, off = OFF;
+    if (entry >= REF_BASE) { bin = RSTORE.bin; off = RSTORE.off; entry -= REF_BASE; }
+    const p = off[entry * 4 + s], n = bin[p];
+    return { init: bin[p + 1], flips: bin.subarray(p + 2, p + 2 + n) };
   }
   function runStats(sr, a, b) {
     let st = sr.init, start = 0, on = 0, lOn = 0, lOff = 0, drops = 0;
@@ -293,7 +299,35 @@
     }
     g.setAttribute("pointer-events", "none");
   }
+  function drawRefs() {
+    const g = $("#reflayer");
+    g.innerHTML = "";
+    if (!REFS || !$("#refLayer").checked) return;
+    REFS.forEach((r, k) => {
+      if (!r.in_map) return;
+      const grp = el("g", { class: "ref" + (state.target === "ref" && state.ref === k ? " sel" : "") }, g);
+      const x = r.x_km, y = -r.y_km, d = 3.2 * K;
+      el("path", { d: `M${x} ${y - d}L${x + d} ${y}L${x} ${y + d}L${x - d} ${y}Z`, fill: "#0b0e14", stroke: "#7cf0ff", "stroke-width": 0.9 * K }, grp);
+      el("text", { x: x + 4.5 * K, y: y + 2 * K, "font-size": 5.5 * K, style: `stroke-width:${1.5 * K}px` }, grp).textContent = refName(r).replace(/\s*\(.*\)/, "");
+      grp.addEventListener("click", (ev) => { ev.stopPropagation(); selectRef(k, true); });
+    });
+  }
+  function drawStar() {
+    const g = $("#starlayer");
+    g.innerHTML = "";
+    const pr = proposed();
+    if (pr == null) return;
+    const x = G.x_km[pr.i], y = -G.y_km[pr.i], R = 5 * K, r = 2.1 * K;
+    let d = "";
+    for (let k = 0; k < 10; k++) {
+      const a = (Math.PI / 5) * k - Math.PI / 2, rr = k % 2 ? r : R;
+      d += (k ? "L" : "M") + (x + rr * Math.cos(a)).toFixed(2) + " " + (y + rr * Math.sin(a)).toFixed(2);
+    }
+    const st = el("path", { d: d + "Z", fill: "#ffd166", stroke: "#0b0e14", "stroke-width": 0.7 * K, class: "star" }, g);
+    st.addEventListener("click", (ev) => { ev.stopPropagation(); pick(pr.i, true); });
+  }
   function drawSites() {
+    drawRefs(); drawStar();
     const g = $("#sitelayer");
     g.innerHTML = "";
     S.sites.forEach((s, i) => {
@@ -534,6 +568,61 @@
     ctx.textAlign = "left";
   }
 
+  /* ------------------------------------------------------------ proposed site */
+  // Score: Both% minus 1 point per degree of slope above 5°; requires Sun > 0,
+  // Earth > 0, Both > 0 and LOLA slope < 10°, plus any active filters.
+  // Ties: higher Sun%, then lower slope.
+  function proposed() {
+    if (!G || !X) return null;
+    const gs = gridStats();
+    let best = null;
+    for (let i = 0; i < G.n; i++) {
+      const sl = X.grid.slope_deg[i], b = gs.both[i];
+      if (!(gs.sun[i] > 0 && gs.earth[i] > 0 && b > 0 && sl < 10)) continue;
+      if (filtersOn() && !passes(i, gs)) continue;
+      const score = b - Math.max(0, sl - 5);
+      if (!best || score > best.score || (score === best.score && (gs.sun[i] > best.sun || (gs.sun[i] === best.sun && sl < best.slope))))
+        best = { i, score, sun: gs.sun[i], earth: gs.earth[i], both: b, slope: sl };
+    }
+    return best;
+  }
+  function drawProposed() {
+    const box = $("#propBody"), pr = proposed();
+    if (!pr) { box.innerHTML = `<p class="muted">${t("propNone")}</p>`; return; }
+    const i = pr.i;
+    const pen = pr.slope > 5 ? t("propPenalty", { p: fmt(pr.slope - 5, 1) }) : "";
+    box.innerHTML = `<div class="prophead"><span class="bigstar">★</span><div><b>${latlonText(G.lat[i], G.lon_e[i])}</b><br><span class="muted small">${t("pickInfo", { e: G.elev[i], c: fmt(G.cell_km[i], 1) })}</span></div></div>
+      <div class="propvals"><span>${t("kBoth")} <b>${fmt(pr.both, 1)}%</b></span><span>${t("kSun")} <b>${fmt(pr.sun, 1)}%</b></span><span>${t("kEarth")} <b>${fmt(pr.earth, 1)}%</b></span><span>${t("cSlope")} ${slopeBadge(pr.slope)}</span><span>${t("cPsr")} <b>${psrText(X.grid.psr_km[i], X.grid.psr[i] === 1)}</b></span></div>
+      <p class="propwhy">${t("propWhy", { range: rangeLabel(), method: methodName(), b: fmt(pr.both, 1), s: fmt(pr.sun, 1), e: fmt(pr.earth, 1), sl: fmt(pr.slope, 1) })}${pen}${filtersOn() ? " " + t("propFilt") : ""}</p>
+      <div class="propbtns"><button class="btn" id="propMap">${t("propShowMap")}</button><button class="btn" id="propTl">${t("propShowTl")}</button></div>`;
+    $("#propMap").onclick = () => { pick(i, false); $(".mapcard").scrollIntoView({ behavior: "smooth", block: "start" }); };
+    $("#propTl").onclick = () => { pick(i, false); $("#detail").scrollIntoView({ behavior: "smooth", block: "start" }); };
+  }
+
+  /* ------------------------------------------------------------ reference sites */
+  const refName = (r) => (state.lang === "es" && r.name_es) || r.name;
+  function refStats(k, m = state.method) {
+    const r = REFS[k];
+    if (BIN && RSTORE) return entryStats(REF_BASE + k, r.terrain ? m : "s", state.a, state.b);
+    return m === "t" && r.terrain ? r.terrain_stats : r.spherical;
+  }
+  function drawRefList() {
+    const ul = $("#refList");
+    if (!REFS) return;
+    ul.innerHTML = "";
+    REFS.forEach((r, k) => {
+      const st = refStats(k), li = document.createElement("li");
+      li.innerHTML = `<b>${refName(r)}</b> <span class="muted small">· ${r.date}</span><br><span class="small">${t("kBoth")} ${fmt(st.both_pct, 1)}% · ${t("kSun")} ${fmt(st.sun_pct, 1)}% · ${t("kEarth")} ${fmt(st.earth_pct, 1)}%${r.slope_deg != null ? " · " + slopeBadge(r.slope_deg) : ""}</span>${r.terrain ? "" : `<br><span class="muted small">${t("refOutside")}</span>`}${r.in_map ? "" : `<span class="muted small"> · ${t("refOffMap")}</span>`}`;
+      li.addEventListener("click", () => selectRef(k, true));
+      ul.appendChild(li);
+    });
+  }
+  function selectRef(k, scroll) {
+    state.ref = k; state.target = "ref";
+    drawSites(); drawRanking(); drawDetail();
+    if (scroll) $("#detail").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   /* ------------------------------------------------------------ launch planner */
   function moonKm(h) { // h = hour index from Jan 1 of YEAR (may be negative)
     const m = X.moon, base = (Date.parse(m.start + "T00:00:00Z") - Date.UTC(YEAR, 0, 1)) / 3600e3;
@@ -588,14 +677,23 @@
     sel.innerHTML = "";
     S.sites.forEach((s) => { const o = document.createElement("option"); o.value = s.id; o.textContent = siteName(s, true); sel.appendChild(o); });
     if (state.pick != null) { const o = document.createElement("option"); o.value = "__pt"; o.textContent = t("selPoint"); sel.appendChild(o); }
-    sel.value = state.target === "point" ? "__pt" : state.site;
+    if (REFS) REFS.forEach((r, k) => { const o = document.createElement("option"); o.value = "__ref" + k; o.textContent = "◆ " + refName(r); sel.appendChild(o); });
+    sel.value = state.target === "point" ? "__pt" : state.target === "ref" ? "__ref" + state.ref : state.site;
   }
   function drawDetail() {
     fillDetailSelect();
-    const isPt = state.target === "point" && state.pick != null;
+    const isRef = state.target === "ref" && REFS && state.ref != null;
+    const isPt = !isRef && state.target === "point" && state.pick != null;
     let st, so, entry, xs;
     const card = (l, v, sub) => `<div class="stat"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`;
-    if (isPt) {
+    if (isRef) {
+      const k = state.ref, r = REFS[k];
+      entry = REF_BASE + k;
+      $("#dName").textContent = "◆ " + refName(r);
+      $("#dMeta").innerHTML = `${latlonText(r.lat, r.lon_e)} · ${r.mission} · ${r.date}<br>${r.outcome[state.lang] || r.outcome.en}<br>${t("source")}: <a href="${r.url}" target="_blank" rel="noopener">${r.source}</a>${r.terrain ? "" : `<br><b>${t("refOutside")}</b>`}`;
+      st = refStats(k); so = refStats(k, state.method === "t" ? "s" : "t");
+      xs = { slope: r.slope_deg, psr: r.psr_km, self: r.psr_km === 0 };
+    } else if (isPt) {
       const i = state.pick;
       entry = 5 + i;
       $("#dName").textContent = t("pointName", { ll: latlonText(G.lat[i], G.lon_e[i]) });
@@ -628,10 +726,10 @@
     const unsuit = st.sun_pct <= 0 ? "unsuitShadow" : st.both_pct <= 0 ? "unsuitNoBoth" : null;
     $("#dStats").insertAdjacentHTML("afterend", `<div id="dSlopeNote">${unsuit ? `<div class="unsuitbox">✕ ${t(unsuit)}</div>` : ""}${slopeNote(xs.slope)}</div>`);
     drawPlanner(entry);
-    if (BIN) drawBands($("#dBands"), entry);
-    $("#hzFig").hidden = isPt;
-    $("#hzNone").hidden = !isPt;
-    if (!isPt) drawHorizon(S.sites[entry]);
+    if (BIN && (!isRef || RSTORE)) drawBands($("#dBands"), entry);
+    $("#hzFig").hidden = isPt || isRef;
+    $("#hzNone").hidden = !(isPt || isRef);
+    if (!isPt && !isRef) drawHorizon(S.sites[entry]);
   }
   function drawHorizon(s) {
     const svg = $("#hz");
@@ -714,7 +812,7 @@
     $("#rangeInfo").textContent = t("rangeInfo", { n: dN, h: rangeLen() });
     const ready = BIN != null;
     $("#d0").disabled = $("#d1").disabled = $("#preset").disabled = !ready;
-    updateHeat(); drawRanking(); drawBest(); drawPick(); drawDetail(); drawSites(); drawGraticule();
+    updateHeat(); drawRanking(); drawBest(); drawPick(); drawDetail(); drawSites(); drawGraticule(); drawProposed(); drawRefList();
   }
   function bindControls() {
     $$("[data-method]").forEach((b) => b.addEventListener("click", () => {
@@ -735,8 +833,9 @@
     $$("[data-lang]").forEach((b) => b.addEventListener("click", () => applyLang(b.dataset.lang)));
     $("#heat").addEventListener("change", updateHeat);
     $("#psrLayer").addEventListener("change", updateHeat);
+    $("#refLayer").addEventListener("change", drawSites);
     for (const [id, k] of [["#fSun", "sun"], ["#fSlope", "slope"], ["#fPsr", "psr"]]) {
-      $(id).addEventListener("change", () => { filt[k] = Number($(id).value); updateHeat(); drawBest(); drawRanking(); });
+      $(id).addEventListener("change", () => { filt[k] = Number($(id).value); updateHeat(); drawBest(); drawRanking(); drawProposed(); drawSites(); });
     }
     $$("#rank th").forEach((th) => th.addEventListener("click", () => {
       const k = th.dataset.k;
@@ -747,6 +846,7 @@
     $("#dSel").addEventListener("change", () => {
       const v = $("#dSel").value;
       if (v === "__pt") { state.target = "point"; drawSites(); drawRanking(); drawDetail(); }
+      else if (v.startsWith("__ref")) selectRef(Number(v.slice(5)), false);
       else selectSite(v, false);
     });
     $("#pickOpen").addEventListener("click", () => { state.target = "point"; drawDetail(); $("#detail").scrollIntoView({ behavior: "smooth", block: "start" }); });
@@ -781,9 +881,11 @@
       state.site = top.id; state.target = "site";
       renderAll();
       window.__pwInteractiveMs = performance.now() - t0;
-      return fetch("data/hourly.bin").then((r) => { if (!r.ok) throw new Error("hourly.bin " + r.status); return r.arrayBuffer(); });
+      const getBuf = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(u + " " + r.status); return r.arrayBuffer(); });
+      return Promise.all([getBuf("data/hourly.bin"), fetch("data/refs.json").then((r) => r.json()), getBuf("data/refs.bin")]);
     })
-    .then((buf) => {
+    .then(([buf, rj, rbuf]) => {
+      REFS = rj.refs; RSTORE = parseStore(rbuf);
       parseBin(buf);
       gridCache.clear();
       const ls = $("#loadState");
