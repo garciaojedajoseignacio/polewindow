@@ -52,12 +52,25 @@
         <button data-metric="sun" data-i18n="kSun">Sun</button>
         <button data-metric="earth" data-i18n="kEarth">Earth</button>
         <button data-metric="dark" data-i18n="kDark">Longest night</button>
+        <button data-metric="slope" data-i18n="kSlope">Slope</button>
+        <button data-metric="psr" data-i18n="kPsr">PSR distance</button>
       </div>
       <div class="seg" role="group" aria-label="Zoom">
         <button data-zoom="full" class="on" data-i18n="zFull">84°S view</button>
         <button data-zoom="pole" data-i18n="zPole">Pole zoom</button>
       </div>
       <label class="chk"><input type="checkbox" id="heat" checked> <span data-i18n="heat">Heat map</span></label>
+      <label class="chk"><input type="checkbox" id="psrLayer"> <span data-i18n="psrLayer">PSR proxy</span></label>
+    </div>
+    <div class="filters">
+      <span class="ftitle" data-i18n="fTitle">Filters</span>
+      <label><span data-i18n="fSun">Min. continuous sunlight</span>
+        <select id="fSun"><option value="0" data-i18n="fOff">off</option><option value="3">≥ 3 d</option><option value="6">≥ 6 d</option><option value="7">≥ 7 d</option><option value="10">≥ 10 d</option></select></label>
+      <label><span data-i18n="fSlope">Max. slope</span>
+        <select id="fSlope"><option value="99" data-i18n="fAny">any</option><option value="5">&lt; 5°</option><option value="10">&lt; 10°</option></select></label>
+      <label><span data-i18n="fPsr">PSR within</span>
+        <select id="fPsr"><option value="999" data-i18n="fAny2">any</option><option value="5">5 km</option><option value="10">10 km</option><option value="20">20 km</option></select></label>
+      <span id="fCount" class="muted small"></span>
     </div>
     <div class="mapwrap">
       <svg id="map" viewBox="-200 -200 400 400" role="img" aria-label="South polar stereographic map of the lunar south pole">
@@ -65,6 +78,7 @@
         <image id="poleimg" href="assets/lola_hillshade_pole.png" x="-40.08" y="-40.08" width="80.16" height="80.16" preserveAspectRatio="none" style="display:none"/>
         <g id="heatlayer"></g>
         <g id="graticule"></g>
+        <g id="psrlayer" style="display:none"></g>
         <g id="sitelayer"></g>
         <g id="picklayer"></g>
       </svg>
@@ -103,6 +117,8 @@
         <th data-k="longest_dark_h" class="num" data-i18n="thLongDark">Longest night</th>
         <th data-k="longest_earth_outage_h" class="num" data-i18n="thBlackout">Longest Earth blackout</th>
         <th data-k="earth_interruptions" class="num" data-i18n="thDrops">Earth drop-outs</th>
+        <th data-k="slope_deg" class="num" data-i18n="thSlope">Slope</th>
+        <th data-k="psr_km" class="num" data-i18n="thPsr">PSR dist.</th>
       </tr></thead>
       <tbody></tbody>
     </table>
@@ -121,6 +137,12 @@
       <figcaption data-i18n="tlCap">Timeline in the selected range (hover or tap for date and time, UTC)</figcaption>
       <div class="bands big" id="dBands"><canvas></canvas><div class="btip" hidden></div></div>
     </figure>
+    <section class="planner" id="planner">
+      <h3 data-i18n="plTitle">Launch window planner</h3>
+      <p class="muted small" data-i18n-html="plIntro">The longest periods in the selected range with both the Sun and Earth in view at this location, and the Earth departure dates that would put a crew there when each one starts. <b>Simplified planning estimate, not a trajectory design.</b></p>
+      <div id="plBody"></div>
+      <p class="muted small" data-i18n-html="plNote">Transit assumption: 3 to 4.5 days, typical of a direct Apollo-style transfer (Apollo 11 launched 16 July 1969 at 13:32 UTC and entered lunar orbit on 19 July at about 17:22 UTC, about 3.2 days; <a href="https://www.nasa.gov/history/apollo-11-mission-overview/" target="_blank" rel="noopener">NASA</a>). Artemis missions use a different architecture (Orion and a lander meeting in lunar orbit), so their real timelines differ. Real launch dates also depend on launch-site geometry, vehicle performance and orbital mechanics. Earth–Moon distance: center to center from JPL DE421 on the landing date; the bar spans the 2027 minimum to maximum, with ticks at the mean perigee (363,300 km) and mean apogee (405,500 km) from the <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html" target="_blank" rel="noopener">NASA Moon Fact Sheet</a>.</p>
+    </section>
     <figure id="hzFig">
       <figcaption data-i18n="hzCap">Local horizon (LOLA) with the Sun and Earth paths in the selected range</figcaption>
       <svg id="hz" viewBox="0 0 1000 260"></svg>
@@ -137,6 +159,9 @@
       <li><b>Spherical horizon.</b> A body is "visible" if its center is above 0° elevation on a smooth sphere. This ignores mountains and craters.</li>
       <li><b>Terrain-aware horizon (default).</b> From the LRO LOLA polar DEM (240 m/pixel) we cast 360 rays (1° azimuth steps) out to <span class="rayKm">150</span> km, sample terrain every 240 m along great circles, account for lunar curvature, and keep the highest elevation angle per azimuth. The observer is <span class="obsH">2</span> m above the LOLA surface. A body is visible if its center is above the horizon at its azimuth.</li>
       <li><b>Metrics.</b> Sun % (power), Earth % (direct-to-Earth radio line of sight), Sun + Earth % (both at once), longest continuous sunlight and night, longest Earth blackout and the number of Earth contact drop-outs.</li>
+      <li><b>Slope.</b> From the official LOLA gridded slope map <code>LDSM_75S_240M</code>, sampled at the nearest 240 m pixel. Per the product label, slopes come from plane fits to successive laser shots (baseline about 30–120 m) and are gridded at 240 m. Thresholds: under 5° ideal (green), 5–10° caution (amber), 10° or more is flagged "Warning: steep slope – not ideal for landing" (red).</li>
+      <li><b>Distance to a permanently shadowed region (PSR).</b> We mark as a PSR proxy every grid point where the Sun's center never rises above the LOLA horizon during the whole year (<span class="nPsr">—</span> points), and report the distance to the nearest one. This is at grid resolution (1.5 km near the pole, 6 km farther out), not an official PSR map.</li>
+      <li><b>Launch window planner.</b> For a site or point, the three longest Sun + Earth periods in the selected range, the Earth departure dates that would put a crew there at the start (window start minus 3 to 4.5 days of transit) and the Earth–Moon distance (JPL DE421). Simplified planning estimate, not a trajectory design.</li>
       <li><b>Grid and date ranges.</b> <span class="gridN">—</span> points: 1.5 km spacing within 36 km of the pole, 6 km spacing out to 84°S. The hourly visibility of every point is stored compactly (run-length encoded) and all statistics for a chosen date range are recomputed in your browser.</li>
     </ol>
     <h3>Validation</h3>
@@ -151,6 +176,10 @@
       <li>240 m DEM resolution smooths summits and small ridges; real illumination at a specific lander position can differ. Higher-resolution LOLA products (5–20 m) exist but were not used for this demo.</li>
       <li>One year (2027) only; the lunar polar illumination pattern changes over the ~18.6-year nodal cycle.</li>
       <li>Earth visibility is geometric line of sight only, not a link budget. No relay satellites are modeled.</li>
+      <li>Slope at 240 m pixels is a regional indicator: landing-scale hazards (boulders, small craters, slopes over a few meters) need 5–20 m or finer data and imagery. A green value does not certify a landing site.</li>
+      <li>The PSR proxy and its distances depend on the grid spacing and on one year of geometry; small cold traps are missed.</li>
+      <li>The launch planner ignores launch-site geometry, vehicle performance, orbit design and mission rules; real Artemis timelines differ from a direct Apollo-style transfer.</li>
+      <li>NASA's Artemis III candidate regions are not drawn on the map: NASA published their names (13 in August 2022, refined to 9 in October 2024: Peak near Cabeus B, Haworth, Malapert Massif, Mons Mouton Plateau, Mons Mouton, Nobile Rim 1, Nobile Rim 2, de Gerlache Rim 2 and Slater Plain) and a map image, but not their coordinates. Connecting Ridge and Peak Near Shackleton were in the 2022 list but not in the October 2024 list.</li>
       <li>Crater-center sites from the gazetteer lie in permanently shadowed floors in the terrain model; they are reference points, not landing recommendations.</li>
       <li>Not an official NASA product and not a mission planning tool.</li>
     </ul>
@@ -163,10 +192,13 @@
       <li><b>NAIF SPICE lunar frame kernels</b> — <code>moon_080317.tf</code>, <code>moon_pa_de421_1900-2050.bpc</code>, <code>pck00008.tpc</code> from <a href="https://naif.jpl.nasa.gov/pub/naif/generic_kernels/" target="_blank" rel="noopener">NASA NAIF generic kernels</a>.</li>
       <li><b>LRO LOLA terrain</b> — Lunar Orbiter Laser Altimeter gridded data record <code>LDEM_75S_240M</code> (data set LRO-L-LOLA-4-GDR-V1.0, product version 2.0, 2017), 240 m/pixel south polar stereographic, from the <a href="https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/" target="_blank" rel="noopener">NASA PDS Geosciences Node</a>. Smith, D. E. et al. (2010), <i>The Lunar Orbiter Laser Altimeter investigation on the Lunar Reconnaissance Orbiter mission</i>, Space Sci. Rev. 150, 209–241. NASA data, public domain.</li>
       <li><b>Sites</b> — Connecting Ridge and Peak Near Shackleton proposed points: Gracy &amp; Lee, 55th LPSC (2024), <a href="https://www.hou.usra.edu/meetings/lpsc2024/pdf/1695.pdf" target="_blank" rel="noopener">abstract 1695</a> (inside NASA Artemis III candidate regions). Shackleton, Haworth and Faustini crater centers: <a href="https://planetarynames.wr.usgs.gov/" target="_blank" rel="noopener">USGS/IAU Gazetteer of Planetary Nomenclature</a>.</li>
+      <li><b>LRO LOLA slope</b> — gridded bidirectional slope <code>LDSM_75S_240M</code> (LRO-L-LOLA-4-GDR-V1.0), same <a href="https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/" target="_blank" rel="noopener">PDS Geosciences directory</a>. NASA data, public domain.</li>
+      <li><b>Artemis III regions</b> — NASA, <a href="https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/" target="_blank" rel="noopener">NASA Provides Update on Artemis III Moon Landing Regions</a> (28 Oct 2024) and <a href="https://www.nasa.gov/news-release/nasa-identifies-candidate-regions-for-landing-next-americans-on-moon/" target="_blank" rel="noopener">candidate regions release</a> (19 Aug 2022).</li>
+      <li><b>Transit and distance references</b> — <a href="https://www.nasa.gov/history/apollo-11-mission-overview/" target="_blank" rel="noopener">NASA Apollo 11 Mission Overview</a>; <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html" target="_blank" rel="noopener">NASA Moon Fact Sheet</a> (mean perigee 363,300 km, mean apogee 405,500 km).</li>
       <li><b>Illumination literature</b> — Mazarico, E. et al. (2011), <i>Illumination conditions of the lunar polar regions using LOLA topography</i>, Icarus 211, 1066–1081.</li>
       <li><b>Software</b> — <a href="https://rhodesmill.org/skyfield/" target="_blank" rel="noopener">Skyfield</a>, NumPy, Pillow. The page itself is plain HTML, CSS and JavaScript with no external services.</li>
     </ul>
-    <p class="muted small">Precomputed data: <a href="data/sites.json">sites.json</a> · <a href="data/grid.json">grid.json</a> · <a href="data/hourly.bin">hourly.bin</a>. Regenerate with <code>python scripts/precompute.py --validate</code> (see README).</p>
+    <p class="muted small">Precomputed data: <a href="data/sites.json">sites.json</a> · <a href="data/grid.json">grid.json</a> · <a href="data/hourly.bin">hourly.bin</a> · <a href="data/extras.json">extras.json</a>. Regenerate with <code>python scripts/precompute.py --validate</code> and <code>python scripts/extras.py</code> (see README).</p>
   </section>
 
   <section class="card wide prose" id="about" data-i18n-html="about">
