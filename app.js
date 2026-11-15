@@ -385,12 +385,18 @@
   /* ------------------------------------------------------------ ranking */
   function rankedSites() {
     const rows = S.sites.map((s, idx) => ({ s, idx, ...siteStats(idx), slope_deg: X.sites[s.id].slope_deg, psr_km: X.sites[s.id].psr_km }));
-    [...rows].sort((a, b) => b.both_pct - a.both_pct || a.longest_dark_h - b.longest_dark_h).forEach((r, k) => (r.rank = k + 1));
+    rows.forEach((r) => {
+      r.suitable = r.sun_pct > 0 && r.both_pct > 0;
+      r.reason = r.suitable ? null : r.sun_pct > 0 ? "unsuitNoBoth" : "unsuitShadow";
+    });
+    rows.filter((r) => r.suitable).sort((a, b) => b.both_pct - a.both_pct || a.longest_dark_h - b.longest_dark_h).forEach((r, k) => (r.rank = k + 1));
+    rows.forEach((r) => { if (!r.suitable) r.rank = Infinity; });
     return rows;
   }
   function whySentence(rows) {
-    const byRank = [...rows].sort((a, b) => a.rank - b.rank), A = byRank[0], B = byRank[1];
-    if (!A || A.both_pct <= 0) return t("whyNone", { range: rangeLabel() });
+    const byRank = rows.filter((r) => r.suitable).sort((a, b) => a.rank - b.rank), A = byRank[0], B = byRank[1];
+    if (!A) return t("whyNone", { range: rangeLabel() });
+    if (!B) return t("whyOnly", { site: siteName(A.s, true), range: rangeLabel(), a: fmt(A.both_pct, 1), method: methodName() });
     let clause = "";
     if (A.longest_dark_h < B.longest_dark_h) clause = t("whyNight", { a: days(A.longest_dark_h), b: days(B.longest_dark_h) });
     else if (A.longest_sun_h > B.longest_sun_h) clause = t("whySun", { a: days(A.longest_sun_h) });
@@ -402,6 +408,7 @@
     const rows = rankedSites(), key = state.sortKey;
     $("#why").textContent = whySentence(rows);
     rows.sort((a, b) => {
+      if (a.suitable !== b.suitable) return a.suitable ? -1 : 1; // unsuitable rows always last
       const va = key === "name" ? siteName(a.s) : key === "rank" ? a.rank : a[key];
       const vb = key === "name" ? siteName(b.s) : key === "rank" ? b.rank : b[key];
       const c = va < vb ? -1 : va > vb ? 1 : 0;
@@ -409,13 +416,22 @@
     });
     const tb = $("#rank tbody");
     tb.innerHTML = "";
+    let sepDone = false;
     for (const r of rows) {
       const tr = document.createElement("tr");
       const cls = [];
       if (state.target === "site" && r.s.id === state.site) cls.push("sel");
       if (filtersOn() && !sitePasses(r.idx, r)) cls.push("nomatch");
+      if (!r.suitable) cls.push("unsuit");
       tr.className = cls.join(" ");
-      tr.innerHTML = `<td>${r.rank}</td><td><span class="dot" style="background:${SITE_COLORS[r.idx]}"></span>${siteName(r.s, true)}</td>
+      if (!r.suitable && !sepDone) {
+        sepDone = true;
+        const sep = document.createElement("tr");
+        sep.className = "sep";
+        sep.innerHTML = `<td colspan="11">${t("notRanked")}</td>`;
+        tb.appendChild(sep);
+      }
+      tr.innerHTML = `<td>${r.suitable ? r.rank : "—"}</td><td><span class="dot" style="background:${SITE_COLORS[r.idx]}"></span>${siteName(r.s, true)}${r.suitable ? "" : `<br><span class="nosuit">✕ ${t(r.reason)}</span>`}</td>
         <td class="num">${fmt(r.sun_pct, 1)}</td><td class="num">${fmt(r.earth_pct, 1)}</td><td class="num"><b>${fmt(r.both_pct, 1)}</b></td>
         <td class="num">${r.longest_sun_h == null ? "—" : days(r.longest_sun_h)}</td><td class="num">${days(r.longest_dark_h)}</td>
         <td class="num">${days(r.longest_earth_outage_h)}</td><td class="num">${r.earth_interruptions == null ? "—" : r.earth_interruptions}</td>
@@ -431,7 +447,7 @@
   }
   function drawBest() {
     const gs = gridStats("t");
-    const idx = [...Array(G.n).keys()].filter((i) => !filtersOn() || passes(i, gs)).sort((a, b) => gs.both[b] - gs.both[a]);
+    const idx = [...Array(G.n).keys()].filter((i) => gs.sun[i] > 0 && gs.both[i] > 0 && (!filtersOn() || passes(i, gs))).sort((a, b) => gs.both[b] - gs.both[a]);
     const chosen = [];
     for (const i of idx) {
       if (chosen.every((j) => Math.hypot(G.x_km[i] - G.x_km[j], G.y_km[i] - G.y_km[j]) > 6)) chosen.push(i);
@@ -609,7 +625,8 @@
       card(t("cSlope"), slopeBadge(xs.slope), "LOLA LDSM_75S_240M") +
       card(t("cPsr"), psrText(xs.psr, xs.self), t("psrSub"));
     $("#dSlopeNote") && $("#dSlopeNote").remove();
-    $("#dStats").insertAdjacentHTML("afterend", `<div id="dSlopeNote">${slopeNote(xs.slope)}</div>`);
+    const unsuit = st.sun_pct <= 0 ? "unsuitShadow" : st.both_pct <= 0 ? "unsuitNoBoth" : null;
+    $("#dStats").insertAdjacentHTML("afterend", `<div id="dSlopeNote">${unsuit ? `<div class="unsuitbox">✕ ${t(unsuit)}</div>` : ""}${slopeNote(xs.slope)}</div>`);
     drawPlanner(entry);
     if (BIN) drawBands($("#dBands"), entry);
     $("#hzFig").hidden = isPt;
