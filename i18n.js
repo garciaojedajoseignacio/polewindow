@@ -13,6 +13,12 @@ window.POLEWINDOW_I18N = {
     faustini_center: "Centro del cráter Faustini",
   },
   es: {
+    kSlope: "Pendiente", kPsr: "Distancia a PSR", psrLayer: "Aprox. PSR",
+    fTitle: "Filtros", fSun: "Sol continuo mínimo", fOff: "sin filtro", fSlope: "Pendiente máx.", fAny: "cualquiera", fPsr: "PSR a menos de", fAny2: "cualquiera",
+    thSlope: "Pendiente", thPsr: "Dist. PSR",
+    plTitle: "Planificador de ventana de lanzamiento",
+    plIntro: "Los períodos más largos del rango elegido con el Sol y la Tierra a la vista en este lugar, y las fechas de salida desde la Tierra para que una tripulación llegue cuando empieza cada uno. <b>Estimación simplificada de planificación, no un diseño de trayectoria.</b>",
+    plNote: 'Supuesto de viaje: 3 a 4,5 días, típico de una transferencia directa estilo Apollo (el Apollo 11 despegó el 16 de julio de 1969 a las 13:32 UTC y entró en órbita lunar el 19 de julio cerca de las 17:22 UTC, unos 3,2 días; <a href="https://www.nasa.gov/history/apollo-11-mission-overview/" target="_blank" rel="noopener">NASA</a>). Las misiones Artemis usan otra arquitectura (Orion y un módulo de alunizaje que se encuentran en órbita lunar), así que sus tiempos reales son distintos. Las fechas reales también dependen de la geometría del sitio de lanzamiento, del vehículo y de la mecánica orbital. Distancia Tierra–Luna: de centro a centro según JPL DE421 en la fecha de llegada; la barra va del mínimo al máximo de 2027, con marcas en el perigeo medio (363.300 km) y el apogeo medio (405.500 km) de la <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html" target="_blank" rel="noopener">NASA Moon Fact Sheet</a>.',
     title: "PoleWindow — Navegador de sitios de alunizaje en el polo sur lunar",
     tag: "Navegador de sitios de alunizaje en el polo sur lunar · NASA Space Apps 2026 · Equipo Kirby Landers",
     navExplore: "Explorar", navMethod: "Método", navSources: "Datos y fuentes", navAbout: "Equipo",
@@ -47,6 +53,9 @@ window.POLEWINDOW_I18N = {
       <li><b>Horizonte esférico.</b> Un cuerpo está "a la vista" si su centro está sobre 0° de elevación en una esfera lisa. No considera montañas ni cráteres.</li>
       <li><b>Horizonte con relieve (por defecto).</b> Con el modelo de elevación polar LRO LOLA (240 m/píxel) trazamos 360 rayos (cada 1° de azimut) hasta <span class="rayKm">150</span> km, muestreamos el terreno cada 240 m sobre círculos máximos, consideramos la curvatura lunar y guardamos el mayor ángulo de elevación por azimut. El observador está <span class="obsH">2</span> m sobre la superficie LOLA. Un cuerpo está a la vista si su centro supera el horizonte en su azimut.</li>
       <li><b>Métricas.</b> Sol % (energía), Tierra % (línea de vista directa para radio), Sol + Tierra % (ambos a la vez), sol continuo y noche más largos, corte más largo con la Tierra y número de cortes de contacto con la Tierra.</li>
+      <li><b>Pendiente.</b> Del mapa oficial de pendientes LOLA <code>LDSM_75S_240M</code>, tomando el píxel de 240 m más cercano. Según la etiqueta del producto, las pendientes salen de ajustar planos a disparos láser sucesivos (línea base de unos 30–120 m) y se entregan en una grilla de 240 m. Umbrales: bajo 5° ideal (verde), 5–10° precaución (ámbar), 10° o más se marca "Advertencia: pendiente elevada – no ideal para alunizaje" (rojo).</li>
+      <li><b>Distancia a una región en sombra permanente (PSR).</b> Marcamos como aproximación de PSR cada punto de la grilla donde el centro del Sol nunca sube sobre el horizonte LOLA en todo el año (<span class="nPsr">—</span> puntos) e informamos la distancia al más cercano. Está a la resolución de la grilla (1,5 km cerca del polo, 6 km más lejos); no es un mapa oficial de PSR.</li>
+      <li><b>Planificador de ventana de lanzamiento.</b> Para un sitio o punto, los tres períodos más largos con Sol + Tierra en el rango elegido, las fechas de salida desde la Tierra para llegar al inicio (inicio de la ventana menos 3 a 4,5 días de viaje) y la distancia Tierra–Luna (JPL DE421). Estimación simplificada de planificación, no un diseño de trayectoria.</li>
       <li><b>Grilla y rangos de fechas.</b> <span class="gridN">—</span> puntos: cada 1,5 km dentro de 36 km del polo y cada 6 km hasta 84°S. La visibilidad hora a hora de cada punto se guarda comprimida (codificación por tramos) y todas las estadísticas del rango elegido se recalculan en tu navegador.</li>
     </ol>
     <h3>Validación</h3>
@@ -61,6 +70,10 @@ window.POLEWINDOW_I18N = {
       <li>La resolución de 240 m suaviza cumbres y crestas pequeñas; la iluminación real en una posición específica puede ser distinta. Existen productos LOLA de mayor resolución (5–20 m) que no se usaron en esta demo.</li>
       <li>Solo un año (2027); el patrón de iluminación polar cambia en el ciclo nodal lunar de ~18,6 años.</li>
       <li>La visibilidad de la Tierra es solo línea de vista geométrica, no un enlace de radio. No se modelan satélites de retransmisión.</li>
+      <li>La pendiente en píxeles de 240 m es un indicador regional: los peligros a escala de alunizaje (rocas, cráteres pequeños, pendientes de pocos metros) requieren datos de 5–20 m o más finos e imágenes. Un valor verde no certifica un sitio de alunizaje.</li>
+      <li>La aproximación de PSR y sus distancias dependen del espaciado de la grilla y de un año de geometría; se pierden trampas frías pequeñas.</li>
+      <li>El planificador de lanzamiento no considera la geometría del sitio de lanzamiento, el rendimiento del vehículo, el diseño de la órbita ni las reglas de la misión; los tiempos reales de Artemis son distintos a una transferencia directa estilo Apollo.</li>
+      <li>Las regiones candidatas de Artemis III de la NASA no se dibujan en el mapa: la NASA publicó sus nombres (13 en agosto de 2022, reducidas a 9 en octubre de 2024: Peak near Cabeus B, Haworth, Malapert Massif, Mons Mouton Plateau, Mons Mouton, Nobile Rim 1, Nobile Rim 2, de Gerlache Rim 2 y Slater Plain) y una imagen, pero no sus coordenadas. Connecting Ridge y Peak Near Shackleton estaban en la lista de 2022, pero no en la de octubre de 2024.</li>
       <li>Los centros de cráter del nomenclátor quedan en fondos en sombra permanente en el modelo con relieve; son puntos de referencia, no recomendaciones de alunizaje.</li>
       <li>No es un producto oficial de la NASA ni una herramienta de planificación de misiones.</li>
     </ul>`,
@@ -70,16 +83,28 @@ window.POLEWINDOW_I18N = {
       <li><b>Kernels SPICE de NAIF para el sistema lunar</b> — <code>moon_080317.tf</code>, <code>moon_pa_de421_1900-2050.bpc</code>, <code>pck00008.tpc</code> de los <a href="https://naif.jpl.nasa.gov/pub/naif/generic_kernels/" target="_blank" rel="noopener">kernels genéricos de NASA NAIF</a>.</li>
       <li><b>Relieve LRO LOLA</b> — registro de datos en grilla del Lunar Orbiter Laser Altimeter <code>LDEM_75S_240M</code> (conjunto LRO-L-LOLA-4-GDR-V1.0, versión 2.0, 2017), 240 m/píxel en estereográfica polar sur, del <a href="https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/" target="_blank" rel="noopener">NASA PDS Geosciences Node</a>. Smith, D. E. et al. (2010), <i>The Lunar Orbiter Laser Altimeter investigation on the Lunar Reconnaissance Orbiter mission</i>, Space Sci. Rev. 150, 209–241. Datos de la NASA, dominio público.</li>
       <li><b>Sitios</b> — Puntos propuestos de Connecting Ridge y Peak Near Shackleton: Gracy &amp; Lee, 55th LPSC (2024), <a href="https://www.hou.usra.edu/meetings/lpsc2024/pdf/1695.pdf" target="_blank" rel="noopener">resumen 1695</a> (dentro de regiones candidatas de Artemis III de la NASA). Centros de los cráteres Shackleton, Haworth y Faustini: <a href="https://planetarynames.wr.usgs.gov/" target="_blank" rel="noopener">nomenclátor planetario USGS/IAU</a>.</li>
+      <li><b>Pendiente LRO LOLA</b> — pendiente bidireccional en grilla <code>LDSM_75S_240M</code> (LRO-L-LOLA-4-GDR-V1.0), en el mismo <a href="https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/" target="_blank" rel="noopener">directorio de PDS Geosciences</a>. Datos de la NASA, dominio público.</li>
+      <li><b>Regiones de Artemis III</b> — NASA, <a href="https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/" target="_blank" rel="noopener">NASA Provides Update on Artemis III Moon Landing Regions</a> (28 oct 2024) y el <a href="https://www.nasa.gov/news-release/nasa-identifies-candidate-regions-for-landing-next-americans-on-moon/" target="_blank" rel="noopener">anuncio de regiones candidatas</a> (19 ago 2022).</li>
+      <li><b>Referencias de viaje y distancia</b> — <a href="https://www.nasa.gov/history/apollo-11-mission-overview/" target="_blank" rel="noopener">NASA Apollo 11 Mission Overview</a>; <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html" target="_blank" rel="noopener">NASA Moon Fact Sheet</a> (perigeo medio 363.300 km, apogeo medio 405.500 km).</li>
       <li><b>Literatura de iluminación</b> — Mazarico, E. et al. (2011), <i>Illumination conditions of the lunar polar regions using LOLA topography</i>, Icarus 211, 1066–1081.</li>
       <li><b>Software</b> — <a href="https://rhodesmill.org/skyfield/" target="_blank" rel="noopener">Skyfield</a>, NumPy, Pillow. La página es HTML, CSS y JavaScript simples, sin servicios externos.</li>
     </ul>
-    <p class="muted small">Datos precalculados: <a href="data/sites.json">sites.json</a> · <a href="data/grid.json">grid.json</a> · <a href="data/hourly.bin">hourly.bin</a>. Se regeneran con <code>python scripts/precompute.py --validate</code> (ver README).</p>`,
+    <p class="muted small">Datos precalculados: <a href="data/sites.json">sites.json</a> · <a href="data/grid.json">grid.json</a> · <a href="data/hourly.bin">hourly.bin</a> · <a href="data/extras.json">extras.json</a>. Se regeneran con <code>python scripts/precompute.py --validate</code> y <code>python scripts/extras.py</code> (ver README).</p>`,
     about: `<h2>Equipo</h2>
     <p><b>Equipo Kirby Landers</b> — José Ignacio García Ojeda (dueño del equipo) y Tamar Scarleth Huenchuman Sanchez, Osorno, Chile. Hecho para el NASA Space Apps Challenge 2026, desafío <i>Lunar Landing Site Navigator</i>.</p>
     <p><b>Uso de IA:</b> el código se escribió con ayuda de GitHub Copilot y un asistente de IA. Todos los resultados salen de los datos abiertos y el código del <a href="https://github.com/garciaojedajoseignacio/polewindow" target="_blank" rel="noopener">repositorio</a>, con licencia MIT.</p>`,
   },
   dyn: {
     en: {
+      leg_slope: "Slope (LOLA LDSM, 240 m): green < 5°, amber 5–10°, red ≥ 10°", leg_psr: "Distance to nearest PSR proxy (km)",
+      slopeWarn: "Warning: steep slope – not ideal for landing", slopeCaution: "Caution: slope between 5° and 10°",
+      psrInside: "inside PSR proxy", psrSub: "nearest grid point with no sun all year",
+      fCount: "{n} of {N} points match", noMatch: "No grid point matches the filters.",
+      cSlope: "Slope (240 m)", cPsr: "Distance to PSR",
+      perigee: "perigee", apogee: "apogee",
+      plNone: "No period with both the Sun and Earth in view in this range.", plLoading: "Loading hourly data…",
+      plWindow: "Sun + Earth window (UTC)", plDepart: "Depart Earth", plTransit: "3–4.5 day transit",
+      plDistDep: "Earth–Moon at departure: {a}–{b} km", plDist: "Earth–Moon distance at arrival", plOpen: "already open at range start",
       methT: "terrain", methS: "spherical", wholeRange: "entire range",
       rangeFull: "the full year {y}", rangeInfo: "{n} days · {h} hours",
       pFull: "Full year {y}", pQ1: "Q1 (Jan–Mar)", pQ2: "Q2 (Apr–Jun)", pQ3: "Q3 (Jul–Sep)", pQ4: "Q4 (Oct–Dec)", pCustom: "Custom",
@@ -103,6 +128,15 @@ window.POLEWINDOW_I18N = {
       whyNone: "No site has the Sun and Earth in view at the same time in {range}.",
     },
     es: {
+      leg_slope: "Pendiente (LOLA LDSM, 240 m): verde < 5°, ámbar 5–10°, rojo ≥ 10°", leg_psr: "Distancia a la PSR aproximada más cercana (km)",
+      slopeWarn: "Advertencia: pendiente elevada – no ideal para alunizaje", slopeCaution: "Precaución: pendiente entre 5° y 10°",
+      psrInside: "dentro de PSR aprox.", psrSub: "punto de la grilla más cercano sin sol en todo el año",
+      fCount: "{n} de {N} puntos cumplen", noMatch: "Ningún punto de la grilla cumple los filtros.",
+      cSlope: "Pendiente (240 m)", cPsr: "Distancia a PSR",
+      perigee: "perigeo", apogee: "apogeo",
+      plNone: "No hay períodos con el Sol y la Tierra a la vista en este rango.", plLoading: "Cargando datos horarios…",
+      plWindow: "Ventana Sol + Tierra (UTC)", plDepart: "Salida desde la Tierra", plTransit: "viaje de 3–4,5 días",
+      plDistDep: "Tierra–Luna al salir: {a}–{b} km", plDist: "Distancia Tierra–Luna al llegar", plOpen: "ya abierta al inicio del rango",
       methT: "relieve", methS: "esférico", wholeRange: "todo el rango",
       rangeFull: "todo el año {y}", rangeInfo: "{n} días · {h} horas",
       pFull: "Año completo {y}", pQ1: "T1 (ene–mar)", pQ2: "T2 (abr–jun)", pQ3: "T3 (jul–sep)", pQ4: "T4 (oct–dic)", pCustom: "Personalizado",

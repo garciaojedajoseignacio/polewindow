@@ -9,7 +9,9 @@
   const LABEL_POS = { connecting_ridge: [-4, -3, "end"], shackleton_center: [3, -4.5, "start"], peak_near_shackleton: [4, 6.5, "start"] };
   const state = { lang: "en", zoom: "full", method: "t", metric: "both", sortKey: "both_pct", sortAsc: false,
                   site: null, pick: null, target: null, a: 0, b: 8760 };
-  let S, G, K = 1, VMAX = 100, ORDER = [];
+  let S, G, X, K = 1, VMAX = 100, ORDER = [];
+  const filt = { sun: 0, slope: 99, psr: 999 };
+  const MEAN_PERIGEE = 363300, MEAN_APOGEE = 405500;
   let BIN = null, OFF = null, NH = 8760, YEAR = 2027;
   const gridCache = new Map();
 
@@ -184,7 +186,29 @@
     return `rgb(${c[0]},${c[1]},${c[2]})`;
   }
   const darkCap = () => Math.max(1, Math.min(30, Math.round(rangeLen() / 24)));
+  const SLOPE_COL = (d) => (d < 5 ? "#3ddc84" : d < 10 ? "#ffb020" : "#ff5c5c");
+  const slopeClass = (d) => (d < 5 ? "ok" : d < 10 ? "warn" : "bad");
+  function slopeBadge(d) { return d == null ? "—" : `<span class="sl ${slopeClass(d)}">${fmt(d, 1)}°</span>`; }
+  function slopeNote(d) {
+    if (d == null || d < 5) return "";
+    return d >= 10 ? `<div class="warnbox">⚠ ${t("slopeWarn")}</div>` : `<div class="cautionbox">${t("slopeCaution")}</div>`;
+  }
+  const psrText = (km, self) => (self ? t("psrInside") : km == null ? "—" : fmt(km, 1) + " km");
+  function passes(i, gs) {
+    if (X.grid.slope_deg[i] >= filt.slope) return false;
+    if (X.grid.psr_km[i] > filt.psr) return false;
+    if (filt.sun > 0 && gs.lsun && gs.lsun[i] < filt.sun * 24) return false;
+    return true;
+  }
+  function sitePasses(i, st) {
+    const x = X.sites[S.sites[i].id];
+    if (x.slope_deg >= filt.slope || x.psr_km > filt.psr) return false;
+    if (filt.sun > 0 && st.longest_sun_h != null && st.longest_sun_h < filt.sun * 24) return false;
+    return true;
+  }
+  const filtersOn = () => filt.sun > 0 || filt.slope < 99 || filt.psr < 999;
   function norm(metric, val) {
+    if (metric === "psr") return 1 - Math.min(val, 20) / 20;
     if (metric === "dark") { const c = darkCap(); return 1 - Math.min(val / 24, c) / c; }
     return val / VMAX;
   }
@@ -229,19 +253,45 @@
     g.setAttribute("opacity", 0.55);
     g.setAttribute("pointer-events", "none");
   }
-  const metricArray = () => gridStats()[state.metric];
+  const metricArray = () => (state.metric === "slope" ? X.grid.slope_deg : state.metric === "psr" ? X.grid.psr_km : gridStats()[state.metric]);
   function updateHeat() {
-    const arr = metricArray();
+    const arr = metricArray(), gs = gridStats();
     let mx = 0;
     for (let i = 0; i < arr.length; i++) if (arr[i] > mx) mx = arr[i];
     VMAX = Math.max(10, Math.ceil(mx / 10) * 10);
-    const rects = $("#heatlayer").children;
-    for (let k = 0; k < rects.length; k++) rects[k].setAttribute("fill", color(norm(state.metric, arr[ORDER[k]])));
+    const rects = $("#heatlayer").children, fo = filtersOn();
+    let nMatch = 0;
+    for (let k = 0; k < rects.length; k++) {
+      const i = ORDER[k], ok = !fo || passes(i, gs);
+      if (ok) nMatch++;
+      rects[k].setAttribute("fill", state.metric === "slope" ? SLOPE_COL(arr[i]) : color(norm(state.metric, arr[i])));
+      rects[k].setAttribute("fill-opacity", ok ? 1 : 0.08);
+    }
+    $("#fCount").textContent = fo ? t("fCount", { n: nMatch.toLocaleString(locale()), N: G.n.toLocaleString(locale()) }) : "";
     $("#heatlayer").style.display = $("#heat").checked ? "" : "none";
-    $("#legBar").style.background = `linear-gradient(90deg,${[...Array(10).keys()].map((k) => color(k / 9)).join(",")})`;
+    $("#psrlayer").style.display = $("#psrLayer").checked ? "" : "none";
+    const bar = $("#legBar");
+    if (state.metric === "slope") {
+      bar.style.background = "linear-gradient(90deg,#3ddc84 0 33%,#ffb020 33% 66%,#ff5c5c 66%)";
+      $("#legLo").textContent = "0°"; $("#legHi").textContent = "> 10°";
+      $("#legLabel").textContent = t("leg_slope");
+      return;
+    }
+    bar.style.background = `linear-gradient(90deg,${[...Array(10).keys()].map((k) => color(k / 9)).join(",")})`;
     if (state.metric === "dark") { $("#legLo").textContent = darkCap() + "+ d"; $("#legHi").textContent = "0 d"; }
+    else if (state.metric === "psr") { $("#legLo").textContent = "20+ km"; $("#legHi").textContent = "0 km"; }
     else { $("#legLo").textContent = "0%"; $("#legHi").textContent = VMAX + "%"; }
-    $("#legLabel").textContent = `${t("leg_" + state.metric)} (${methodName()})`;
+    $("#legLabel").textContent = state.metric === "psr" ? t("leg_psr") : `${t("leg_" + state.metric)} (${methodName()})`;
+  }
+  function drawPsr() {
+    const g = $("#psrlayer");
+    g.innerHTML = "";
+    for (let i = 0; i < G.n; i++) {
+      if (!X.grid.psr[i]) continue;
+      const c = G.cell_km[i];
+      el("rect", { x: G.x_km[i] - c / 2, y: -G.y_km[i] - c / 2, width: c + 0.05, height: c + 0.05, fill: "rgba(70,130,255,.55)", stroke: "rgba(150,190,255,.8)", "stroke-width": 0.15 }, g);
+    }
+    g.setAttribute("pointer-events", "none");
   }
   function drawSites() {
     const g = $("#sitelayer");
@@ -302,7 +352,9 @@
     body.innerHTML =
       `<p style="margin:0 0 8px"><b>${latlonText(G.lat[i], G.lon_e[i])}</b> · ${t("pickInfo", { e: G.elev[i], c: fmt(G.cell_km[i], 1) })}</p>
        <div class="kv"><div class="h"></div><div class="h">${t("colTerr")}</div><div class="h">${t("colSph")}</div>
-       ${row(t("kSun"), "sun_pct")}${row(t("kEarth"), "earth_pct")}${row(t("kBoth"), "both_pct")}${row(t("cLongSun"), "longest_sun_h", true)}${row(t("cLongDark"), "longest_dark_h", true)}${row(t("cBlackout"), "longest_earth_outage_h", true)}</div>`;
+       ${row(t("kSun"), "sun_pct")}${row(t("kEarth"), "earth_pct")}${row(t("kBoth"), "both_pct")}${row(t("cLongSun"), "longest_sun_h", true)}${row(t("cLongDark"), "longest_dark_h", true)}${row(t("cBlackout"), "longest_earth_outage_h", true)}</div>
+       <div class="kv" style="margin-top:6px"><div>${t("cSlope")}</div><div>${slopeBadge(X.grid.slope_deg[i])}</div><div class="muted small">LOLA LDSM</div>
+       <div>${t("cPsr")}</div><div>${psrText(X.grid.psr_km[i], X.grid.psr[i] === 1)}</div><div></div></div>${slopeNote(X.grid.slope_deg[i])}`;
     $("#pickOpen").hidden = false;
     if (BIN) { $("#pickBands").hidden = false; drawBands($("#pickBands"), 5 + i); }
     else $("#pickBands").hidden = true;
@@ -323,7 +375,7 @@
       let txt = latlonText(ll.lat, ll.lon);
       if (Math.hypot(p.x, p.y) <= rmax + 3) {
         const v = metricArray()[nearest(p.x, p.y)];
-        txt += ` · ${state.metric === "dark" ? days(v) : fmt(v, 1) + "%"}`;
+        txt += ` · ${state.metric === "dark" ? days(v) : state.metric === "slope" ? fmt(v, 1) + "°" : state.metric === "psr" ? fmt(v, 1) + " km" : fmt(v, 1) + "%"}`;
       }
       tip.textContent = txt;
     });
@@ -332,7 +384,7 @@
 
   /* ------------------------------------------------------------ ranking */
   function rankedSites() {
-    const rows = S.sites.map((s, idx) => ({ s, idx, ...siteStats(idx) }));
+    const rows = S.sites.map((s, idx) => ({ s, idx, ...siteStats(idx), slope_deg: X.sites[s.id].slope_deg, psr_km: X.sites[s.id].psr_km }));
     [...rows].sort((a, b) => b.both_pct - a.both_pct || a.longest_dark_h - b.longest_dark_h).forEach((r, k) => (r.rank = k + 1));
     return rows;
   }
@@ -359,11 +411,15 @@
     tb.innerHTML = "";
     for (const r of rows) {
       const tr = document.createElement("tr");
-      if (state.target === "site" && r.s.id === state.site) tr.className = "sel";
+      const cls = [];
+      if (state.target === "site" && r.s.id === state.site) cls.push("sel");
+      if (filtersOn() && !sitePasses(r.idx, r)) cls.push("nomatch");
+      tr.className = cls.join(" ");
       tr.innerHTML = `<td>${r.rank}</td><td><span class="dot" style="background:${SITE_COLORS[r.idx]}"></span>${siteName(r.s, true)}</td>
         <td class="num">${fmt(r.sun_pct, 1)}</td><td class="num">${fmt(r.earth_pct, 1)}</td><td class="num"><b>${fmt(r.both_pct, 1)}</b></td>
         <td class="num">${r.longest_sun_h == null ? "—" : days(r.longest_sun_h)}</td><td class="num">${days(r.longest_dark_h)}</td>
-        <td class="num">${days(r.longest_earth_outage_h)}</td><td class="num">${r.earth_interruptions == null ? "—" : r.earth_interruptions}</td>`;
+        <td class="num">${days(r.longest_earth_outage_h)}</td><td class="num">${r.earth_interruptions == null ? "—" : r.earth_interruptions}</td>
+        <td class="num">${slopeBadge(r.slope_deg)}${r.slope_deg >= 10 ? ' <span title="' + t("slopeWarn") + '">⚠</span>' : ""}</td><td class="num">${psrText(r.psr_km, X.sites[r.s.id].psr_self)}</td>`;
       tr.addEventListener("click", () => selectSite(r.s.id, true));
       tb.appendChild(tr);
     }
@@ -375,17 +431,17 @@
   }
   function drawBest() {
     const gs = gridStats("t");
-    const idx = [...Array(G.n).keys()].sort((a, b) => gs.both[b] - gs.both[a]);
+    const idx = [...Array(G.n).keys()].filter((i) => !filtersOn() || passes(i, gs)).sort((a, b) => gs.both[b] - gs.both[a]);
     const chosen = [];
     for (const i of idx) {
       if (chosen.every((j) => Math.hypot(G.x_km[i] - G.x_km[j], G.y_km[i] - G.y_km[j]) > 6)) chosen.push(i);
       if (chosen.length >= 6) break;
     }
     const ol = $("#best");
-    ol.innerHTML = "";
+    ol.innerHTML = chosen.length ? "" : `<li class="muted">${t("noMatch")}</li>`;
     for (const i of chosen) {
       const li = document.createElement("li");
-      li.innerHTML = t("bestItem", { ll: latlonText(G.lat[i], G.lon_e[i]), b: fmt(gs.both[i], 1), s: fmt(gs.sun[i], 1), e: fmt(gs.earth[i], 1) });
+      li.innerHTML = t("bestItem", { ll: latlonText(G.lat[i], G.lon_e[i]), b: fmt(gs.both[i], 1), s: fmt(gs.sun[i], 1), e: fmt(gs.earth[i], 1) }) + " " + slopeBadge(X.grid.slope_deg[i]);
       li.addEventListener("click", () => pick(i, true));
       ol.appendChild(li);
     }
@@ -462,6 +518,48 @@
     ctx.textAlign = "left";
   }
 
+  /* ------------------------------------------------------------ launch planner */
+  function moonKm(h) { // h = hour index from Jan 1 of YEAR (may be negative)
+    const m = X.moon, base = (Date.parse(m.start + "T00:00:00Z") - Date.UTC(YEAR, 0, 1)) / 3600e3;
+    const f = (h - base) / 24, i = Math.floor(f), w = f - i;
+    if (i < 0 || i + 1 >= m.km.length) return null;
+    return m.km[i] * (1 - w) + m.km[i + 1] * w;
+  }
+  function distBar(km) {
+    const lo = X.moon.min.km, hi = X.moon.max.km, pos = (v) => (100 * (v - lo)) / (hi - lo);
+    return `<div class="dbar"><span class="dot" style="left:${pos(km).toFixed(1)}%"></span>
+      <span style="position:absolute;left:${pos(MEAN_PERIGEE)}%;top:-3px;bottom:-3px;width:1px;background:#fff8"></span>
+      <span style="position:absolute;left:${pos(MEAN_APOGEE)}%;top:-3px;bottom:-3px;width:1px;background:#fff8"></span></div>
+      <div class="dbar-l"><span style="left:${pos(MEAN_PERIGEE)}%">${t("perigee")}</span><span style="left:${pos(MEAN_APOGEE)}%;transform:translateX(-100%)">${t("apogee")}</span></div>`;
+  }
+  function drawPlanner(entry) {
+    const box = $("#plBody");
+    if (!BIN) { box.innerHTML = `<p class="muted small">${t("plLoading")}</p>`; return; }
+    const o = state.method === "t" ? 0 : 2;
+    const both = andSeries(series(entry, o), series(entry, o + 1));
+    const wins = [];
+    let st = both.init, start = 0;
+    const f = both.flips;
+    for (let k = 0; k <= f.length; k++) {
+      const end = k < f.length ? f[k] : NH;
+      if (st) { const s0 = Math.max(start, state.a), e0 = Math.min(end, state.b); if (e0 > s0) wins.push([s0, e0, start < state.a]); }
+      start = end; st ^= 1;
+      if (start >= state.b) break;
+    }
+    if (!wins.length) { box.innerHTML = `<p class="muted">${t("plNone")}</p>`; return; }
+    const top = wins.sort((x, y) => (y[1] - y[0]) - (x[1] - x[0])).slice(0, 3).sort((x, y) => x[0] - y[0]);
+    box.innerHTML = top.map(([s0, e0, open]) => {
+      const dep1 = s0 - 4.5 * 24, dep2 = s0 - 3 * 24, km = moonKm(s0);
+      const kmD1 = moonKm(dep1), kmD2 = moonKm(dep2);
+      return `<div class="plrow">
+        <div><div class="l">${t("plWindow")}</div><b>${dTime(hourDate(s0))}</b><br>→ ${dTime(hourDate(e0))}<br><span class="muted">${days(e0 - s0)}${open ? " · " + t("plOpen") : ""}</span></div>
+        <div><div class="l">${t("plDepart")}</div><b>${dShort(hourDate(dep1))} – ${dShort(hourDate(dep2))}${hourDate(dep1).getUTCFullYear() !== YEAR ? " " + hourDate(dep1).getUTCFullYear() : ""}</b><br><span class="muted">${t("plTransit")}</span>
+          ${kmD1 != null && kmD2 != null ? `<br><span class="muted">${t("plDistDep", { a: Math.round(kmD1).toLocaleString(locale()), b: Math.round(kmD2).toLocaleString(locale()) })}</span>` : ""}</div>
+        <div><div class="l">${t("plDist")}</div>${km != null ? `<b>${Math.round(km).toLocaleString(locale())} km</b>${distBar(km)}` : "—"}</div>
+      </div>`;
+    }).join("");
+  }
+
   /* ------------------------------------------------------------ detail */
   function selectSite(id, scroll) {
     state.site = id;
@@ -479,7 +577,7 @@
   function drawDetail() {
     fillDetailSelect();
     const isPt = state.target === "point" && state.pick != null;
-    let st, so, entry;
+    let st, so, entry, xs;
     const card = (l, v, sub) => `<div class="stat"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`;
     if (isPt) {
       const i = state.pick;
@@ -487,6 +585,7 @@
       $("#dName").textContent = t("pointName", { ll: latlonText(G.lat[i], G.lon_e[i]) });
       $("#dMeta").textContent = t("dMetaPt", { ll: latlonText(G.lat[i], G.lon_e[i]), e: G.elev[i], c: fmt(G.cell_km[i], 1) });
       st = pointStats(i); so = pointStats(i, state.method === "t" ? "s" : "t");
+      xs = { slope: X.grid.slope_deg[i], psr: X.grid.psr_km[i], self: X.grid.psr[i] === 1 };
     } else {
       const idx = S.sites.findIndex((x) => x.id === state.site), s = S.sites[idx];
       if (!s) return;
@@ -494,6 +593,8 @@
       $("#dName").textContent = siteName(s);
       $("#dMeta").innerHTML = t("dMetaSite", { ll: latlonText(s.lat, s.lon_e), e: fmt(s.elev_m, 0), src: s.source.replace(/(https?:\/\/\S+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>') });
       st = siteStats(idx); so = siteStats(idx, state.method === "t" ? "s" : "t");
+      const xx = X.sites[s.id];
+      xs = { slope: xx.slope_deg, psr: xx.psr_km, self: xx.psr_self };
     }
     const pct = (v) => (v == null ? "—" : fmt(v, 1) + "%"), dd = (v) => (v == null ? "—" : days(v));
     const sub = (v) => `${otherMethodName()} ${v}`;
@@ -504,7 +605,12 @@
       card(t("cLongSun"), dd(st.longest_sun_h), sub(dd(so.longest_sun_h))) +
       card(t("cLongDark"), dd(st.longest_dark_h), sub(dd(so.longest_dark_h))) +
       card(t("cBlackout"), dd(st.longest_earth_outage_h), sub(dd(so.longest_earth_outage_h))) +
-      card(t("cDrops"), st.earth_interruptions == null ? "—" : st.earth_interruptions, sub(so.earth_interruptions == null ? "—" : so.earth_interruptions));
+      card(t("cDrops"), st.earth_interruptions == null ? "—" : st.earth_interruptions, sub(so.earth_interruptions == null ? "—" : so.earth_interruptions)) +
+      card(t("cSlope"), slopeBadge(xs.slope), "LOLA LDSM_75S_240M") +
+      card(t("cPsr"), psrText(xs.psr, xs.self), t("psrSub"));
+    $("#dSlopeNote") && $("#dSlopeNote").remove();
+    $("#dStats").insertAdjacentHTML("afterend", `<div id="dSlopeNote">${slopeNote(xs.slope)}</div>`);
+    drawPlanner(entry);
     if (BIN) drawBands($("#dBands"), entry);
     $("#hzFig").hidden = isPt;
     $("#hzNone").hidden = !isPt;
@@ -611,10 +717,14 @@
     }));
     $$("[data-lang]").forEach((b) => b.addEventListener("click", () => applyLang(b.dataset.lang)));
     $("#heat").addEventListener("change", updateHeat);
+    $("#psrLayer").addEventListener("change", updateHeat);
+    for (const [id, k] of [["#fSun", "sun"], ["#fSlope", "slope"], ["#fPsr", "psr"]]) {
+      $(id).addEventListener("change", () => { filt[k] = Number($(id).value); updateHeat(); drawBest(); drawRanking(); });
+    }
     $$("#rank th").forEach((th) => th.addEventListener("click", () => {
       const k = th.dataset.k;
       if (state.sortKey === k) state.sortAsc = !state.sortAsc;
-      else { state.sortKey = k; state.sortAsc = ["name", "rank", "longest_dark_h", "longest_earth_outage_h", "earth_interruptions"].includes(k); }
+      else { state.sortKey = k; state.sortAsc = ["name", "rank", "longest_dark_h", "longest_earth_outage_h", "earth_interruptions", "slope_deg", "psr_km"].includes(k); }
       drawRanking();
     }));
     $("#dSel").addEventListener("change", () => {
@@ -634,6 +744,7 @@
     if (m.validation_max_alt_diff_deg != null) $$(".valDiff").forEach((e) => (e.textContent = t("within", { v: m.validation_max_alt_diff_deg })));
     $$(".rayKm").forEach((e) => (e.textContent = m.horizon.ray_max_km));
     $$(".obsH").forEach((e) => (e.textContent = m.horizon.observer_height_m));
+    $$(".nPsr").forEach((e) => (e.textContent = X.meta.n_psr_points.toLocaleString(locale())));
   }
 
   captureEnglish();
@@ -645,10 +756,10 @@
   if (initLang !== "en") applyLang(initLang);
 
   const t0 = performance.now();
-  Promise.all([fetch("data/sites.json").then((r) => r.json()), fetch("data/grid.json").then((r) => r.json())])
-    .then(([s, g]) => {
-      S = s; G = g; YEAR = S.meta.year; NH = S.meta.n_hours; state.b = NH;
-      fillMeta(); fillPresets(); drawGraticule(); drawHeat(); drawSites(); bindMap(); bindControls(); bindRange();
+  Promise.all([fetch("data/sites.json").then((r) => r.json()), fetch("data/grid.json").then((r) => r.json()), fetch("data/extras.json").then((r) => r.json())])
+    .then(([s, g, x]) => {
+      S = s; G = g; X = x; YEAR = S.meta.year; NH = S.meta.n_hours; state.b = NH;
+      fillMeta(); fillPresets(); drawGraticule(); drawHeat(); drawPsr(); drawSites(); bindMap(); bindControls(); bindRange();
       const top = [...S.sites].map((x, i) => [x, i]).sort((a, b) => b[0].terrain.both_pct - a[0].terrain.both_pct)[0][0];
       state.site = top.id; state.target = "site";
       renderAll();
