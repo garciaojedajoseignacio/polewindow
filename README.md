@@ -12,9 +12,13 @@ The demo is a static page (plain HTML, CSS, and JavaScript; no server, no login,
 
 - A south polar stereographic map (±200 km around the pole) over a shaded-relief image made from **LRO LOLA** topography, with a heat map of Sun, Earth, Sun + Earth visibility or longest night.
 - **Click anywhere** between 84°S and the pole to read the values at the nearest of 4,597 precomputed grid points (1.5 km spacing within 36 km of the pole, 6 km beyond).
-- A sortable ranking of the five cited sites, with a toggle between the **terrain-aware (LOLA)** and the **spherical** horizon.
-- For each site: its LOLA horizon profile with the Sun and Earth paths over 2027, and a daily timeline of hours of Sun, Earth, and both.
+- A **date range** selector (presets: full year, quarters, months, or any start/end date in 2027). All statistics, the ranking, the heat map and the timelines are recomputed in the browser from the hourly data.
+- A sortable ranking of the five cited sites with Sun %, Earth %, Sun + Earth %, **longest continuous sunlight**, longest night, **longest Earth blackout** and **number of Earth contact drop-outs**, plus an auto-generated one-sentence explanation of why the #1 site wins. Toggle between the **terrain-aware (LOLA)** and the **spherical** horizon.
+- **Timelines** as three aligned bands (Sun, Earth, Both) for each site and for any clicked grid point, with a date/time tooltip; each site's LOLA horizon profile with the Sun and Earth paths.
+- English / Chilean Spanish language switch (default English; `?lang=es` also works).
 - Method, sources, validation and limitations.
+
+Hourly visibility for the 5 sites and every grid point is stored in `docs/data/hourly.bin` (about 0.9 MB): for each point and each series (Sun and Earth, terrain and spherical) the initial state and the hours where visibility flips, as little-endian uint16.
 
 The static site lives in [`docs/`](docs/) and is published to the `gh-pages` branch.
 
@@ -81,6 +85,18 @@ Projection equations follow the product's `DSMAP_POLAR.CAT`. For each location, 
 The DEM itself is not committed (it is gitignored); only the derived `docs/assets/lola_hillshade.png` (illustrative shading, not real lighting) and the JSON results are.
 
 ### Results for 2027 (hourly, body center above the horizon)
+
+Terrain-aware ranking with the stability metrics (full year 2027):
+
+| Site | Sun % | Earth % | Both % | Longest sunlight | Longest night | Longest Earth blackout | Earth drop-outs |
+|---|---|---|---|---|---|---|---|
+| Connecting Ridge (proposed landing site) | 57.35 | 47.67 | 30.41 | 23.6 d | 12.3 d | 14.5 d | 13 |
+| Peak Near Shackleton (proposed landing site) | 35.13 | 48.90 | 19.61 | 12.3 d | 28.1 d | 14.0 d | 13 |
+| Shackleton crater center | 0.00 | 0.00 | 0.00 | 0 h | all year | all year | 0 |
+| Haworth crater center | 0.00 | 0.00 | 0.00 | 0 h | all year | all year | 0 |
+| Faustini crater center | 0.00 | 0.00 | 0.00 | 0 h | all year | all year | 0 |
+
+Terrain-aware vs spherical:
 
 | Site | Sun % terrain (spherical) | Earth % terrain (spherical) | Sun + Earth % terrain (spherical) | Longest night, terrain (spherical) |
 |---|---|---|---|---|

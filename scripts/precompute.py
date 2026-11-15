@@ -170,15 +170,39 @@ def longest_run(mask):
     return int((np.where(d == -1)[0] - np.where(d == 1)[0]).max())
 
 
+def interruptions(mask):
+    """Number of visible -> not visible transitions."""
+    return int(np.count_nonzero(mask[:-1] & ~mask[1:]))
+
+
 def stats(sun_vis, earth_vis):
     both = sun_vis & earth_vis
     return {
         "sun_pct": round(100.0 * sun_vis.mean(), 2),
         "earth_pct": round(100.0 * earth_vis.mean(), 2),
         "both_pct": round(100.0 * both.mean(), 2),
+        "longest_sun_h": longest_run(sun_vis),
         "longest_dark_h": longest_run(~sun_vis),
         "longest_earth_outage_h": longest_run(~earth_vis),
+        "earth_interruptions": interruptions(earth_vis),
     }
+
+
+def toggles(mask):
+    """Run encoding: initial state + hour indices where the state flips."""
+    m = mask.astype(np.int8)
+    flips = np.nonzero(np.diff(m))[0] + 1
+    return int(m[0]), flips.astype(np.uint16)
+
+
+def encode_hourly(series_list):
+    """Little-endian uint16 stream: per series [count, init, flips...]."""
+    parts = []
+    for mask in series_list:
+        init, flips = toggles(mask)
+        parts.append(np.array([flips.size, init], dtype="<u2"))
+        parts.append(flips.astype("<u2"))
+    return parts
 
 
 def bits_b64(mask):
@@ -230,20 +254,9 @@ def site_record(dem, sun, earth, lat, lon, include_detail):
         ter_earth = ea > mask_at(mask, ez)
         rec["terrain"] = stats(ter_sun, ter_earth)
         rec["elev_m"] = round(h, 1)
+        rec["_masks"] = (ter_sun, ter_earth, sph_sun, sph_earth)
         if include_detail:
             rec["horizon_deg"] = [round(float(v), 3) for v in mask]
-            rec["daily"] = {
-                "sun_t": daily_hours(ter_sun),
-                "earth_t": daily_hours(ter_earth),
-                "both_t": daily_hours(ter_sun & ter_earth),
-                "sun_s": daily_hours(sph_sun),
-                "earth_s": daily_hours(sph_earth),
-                "both_s": daily_hours(sph_sun & sph_earth),
-            }
-            rec["hourly_b64"] = {
-                "sun_t": bits_b64(ter_sun), "earth_t": bits_b64(ter_earth),
-                "sun_s": bits_b64(sph_sun), "earth_s": bits_b64(sph_earth),
-            }
     if include_detail:
         step = 6
         rec["track"] = {
@@ -315,12 +328,15 @@ def main():
                     "observer_height_m": OBSERVER_HEIGHT_M},
         "map": {"projection": "south polar stereographic, sphere R=1737.4 km, 0E up, 90E right",
                 "half_width_km": MAP_HALF_KM, "pole_inset_half_width_km": 40.0},
+        "hourly_file": "data/hourly.bin (uint16 LE; header n_entries, n_series=4, n_hours; per entry: sun_t, earth_t, sun_s, earth_s as [count, initial_state, flip_hour...]; entries = 5 sites then grid points)",
         "validation_max_alt_diff_deg": None if worst is None else round(float(worst), 5),
     }
 
+    hourly_parts = []
     sites_out = []
     for s in SITES:
         rec = site_record(dem, sun, earth, s["lat"], s["lon_e"], True)
+        hourly_parts += encode_hourly(rec.pop("_masks"))
         x, y = Dem.project(s["lat"], s["lon_e"])
         rec.update({"id": s["id"], "name": s["name"], "lat": s["lat"], "lon_e": s["lon_e"],
                     "x_km": round(float(x) / 1000, 3), "y_km": round(float(y) / 1000, 3),
@@ -352,6 +368,7 @@ def main():
                               "both_t", "dark_t", "elev"]}
     for i, (la, lo) in enumerate(zip(glat, glon)):
         rec = site_record(dem, sun, earth, float(la), float(lo), False)
+        hourly_parts += encode_hourly(rec.pop("_masks"))
         sp = rec["spherical"]
         cols["sun_s"].append(sp["sun_pct"]); cols["earth_s"].append(sp["earth_pct"])
         cols["both_s"].append(sp["both_pct"]); cols["dark_s"].append(sp["longest_dark_h"])
@@ -368,6 +385,14 @@ def main():
             "lat": np.round(glat, 4).tolist(), "lon_e": np.round(glon, 4).tolist(), **cols}
     with open(out / "data" / "grid.json", "w") as f:
         json.dump(grid, f, separators=(",", ":"))
+    # hourly.bin: header [n_entries, n_series, n_hours] then, for the 5 sites
+    # followed by every grid point (grid.json order), 4 series
+    # (sun_t, earth_t, sun_s, earth_s) each as [count, init, flip hours...].
+    header = np.array([len(SITES) + len(glat), 4, n], dtype="<u2")
+    with open(out / "data" / "hourly.bin", "wb") as f:
+        f.write(header.tobytes())
+        for part in hourly_parts:
+            f.write(part.tobytes())
     print(f"done in {time.time()-t0:.1f}s; grid points = {len(glat)}")
 
 

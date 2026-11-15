@@ -13,37 +13,51 @@
     <svg viewBox="0 0 32 32" class="logo" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 3a13 13 0 0 1 0 26" fill="currentColor" opacity=".35"/><circle cx="16" cy="25" r="2.4" fill="#ffd166"/></svg>
     <div>
       <h1>PoleWindow</h1>
-      <p class="tag">Lunar south pole landing site navigator · NASA Space Apps 2026 · Team Kirby Landers</p>
+      <p class="tag" data-i18n="tag">Lunar south pole landing site navigator · NASA Space Apps 2026 · Team Kirby Landers</p>
     </div>
   </div>
   <nav>
-    <a href="#explore">Explore</a><a href="#method">Method</a><a href="#sources">Data &amp; sources</a><a href="#about">About</a>
+    <a href="#explore" data-i18n="navExplore">Explore</a><a href="#method" data-i18n="navMethod">Method</a><a href="#sources" data-i18n="navSources">Data &amp; sources</a><a href="#about" data-i18n="navAbout">About</a>
     <a class="gh" href="https://github.com/garciaojedajoseignacio/polewindow" target="_blank" rel="noopener">GitHub</a>
+    <div class="lang" role="group" aria-label="Language / Idioma">
+      <button data-lang="es" title="Español (Chile)"><svg viewBox="0 0 30 20" class="flag" aria-hidden="true"><rect width="30" height="20" fill="#fff"/><rect y="10" width="30" height="10" fill="#d52b1e"/><rect width="10" height="10" fill="#0039a6"/><polygon fill="#fff" points="5,1.6 5.85,4.15 8.5,4.15 6.35,5.75 7.15,8.3 5,6.75 2.85,8.3 3.65,5.75 1.5,4.15 4.15,4.15"/></svg>ES</button>
+      <button data-lang="en" title="English" class="on"><svg viewBox="0 0 38 20" class="flag" aria-hidden="true"><rect width="38" height="20" fill="#fff"/><g fill="#b22234"><rect width="38" height="1.54"/><rect y="3.08" width="38" height="1.54"/><rect y="6.15" width="38" height="1.54"/><rect y="9.23" width="38" height="1.54"/><rect y="12.31" width="38" height="1.54"/><rect y="15.38" width="38" height="1.54"/><rect y="18.46" width="38" height="1.54"/></g><rect width="15.2" height="10.77" fill="#3c3b6e"/><g fill="#fff"><circle cx="2.5" cy="2" r=".6"/><circle cx="6" cy="2" r=".6"/><circle cx="9.5" cy="2" r=".6"/><circle cx="13" cy="2" r=".6"/><circle cx="4.2" cy="4.2" r=".6"/><circle cx="7.7" cy="4.2" r=".6"/><circle cx="11.2" cy="4.2" r=".6"/><circle cx="2.5" cy="6.4" r=".6"/><circle cx="6" cy="6.4" r=".6"/><circle cx="9.5" cy="6.4" r=".6"/><circle cx="13" cy="6.4" r=".6"/><circle cx="4.2" cy="8.6" r=".6"/><circle cx="7.7" cy="8.6" r=".6"/><circle cx="11.2" cy="8.6" r=".6"/></g></svg>EN</button>
+    </div>
   </nav>
 </header>
 
 <section class="hero">
-  <p>Where on the lunar south pole does a lander get the most <b class="sun">sunlight</b> for power and the most direct view of <b class="earth">Earth</b> for radio contact? PoleWindow computes it hour by hour for all of <span data-year>2027</span> with NASA JPL ephemerides and LRO LOLA laser-altimeter terrain.</p>
+  <p data-i18n-html="hero">Where on the lunar south pole does a lander get the most <b class="sun">sunlight</b> for power and the most direct view of <b class="earth">Earth</b> for radio contact? PoleWindow computes it hour by hour for all of <span data-year>2027</span> with NASA JPL ephemerides and LRO LOLA laser-altimeter terrain.</p>
 </section>
 
 <main id="explore" class="grid">
+  <section class="card wide rangebar">
+    <label for="preset" data-i18n="rangeLabel">Date range (UTC)</label>
+    <select id="preset" aria-label="Preset"></select>
+    <input type="date" id="d0" min="2027-01-01" max="2027-12-31" value="2027-01-01" aria-label="Start date">
+    <span class="muted">–</span>
+    <input type="date" id="d1" min="2027-01-01" max="2027-12-31" value="2027-12-31" aria-label="End date">
+    <span id="rangeInfo" class="muted small"></span>
+    <span id="loadState" class="pill warn" data-i18n="loading">Loading hourly data…</span>
+  </section>
+
   <section class="card mapcard">
     <div class="controls">
       <div class="seg" role="group" aria-label="Horizon model">
-        <button data-method="t" class="on">Terrain (LOLA)</button>
-        <button data-method="s">Spherical</button>
+        <button data-method="t" class="on" data-i18n="mTerrain">Terrain (LOLA)</button>
+        <button data-method="s" data-i18n="mSpherical">Spherical</button>
       </div>
       <div class="seg" role="group" aria-label="Metric">
-        <button data-metric="both" class="on">Sun + Earth</button>
-        <button data-metric="sun">Sun</button>
-        <button data-metric="earth">Earth</button>
-        <button data-metric="dark">Longest night</button>
+        <button data-metric="both" class="on" data-i18n="kBoth">Sun + Earth</button>
+        <button data-metric="sun" data-i18n="kSun">Sun</button>
+        <button data-metric="earth" data-i18n="kEarth">Earth</button>
+        <button data-metric="dark" data-i18n="kDark">Longest night</button>
       </div>
       <div class="seg" role="group" aria-label="Zoom">
-        <button data-zoom="full" class="on">84°S view</button>
-        <button data-zoom="pole">Pole zoom</button>
+        <button data-zoom="full" class="on" data-i18n="zFull">84°S view</button>
+        <button data-zoom="pole" data-i18n="zPole">Pole zoom</button>
       </div>
-      <label class="chk"><input type="checkbox" id="heat" checked> Heat map</label>
+      <label class="chk"><input type="checkbox" id="heat" checked> <span data-i18n="heat">Heat map</span></label>
     </div>
     <div class="mapwrap">
       <svg id="map" viewBox="-200 -200 400 400" role="img" aria-label="South polar stereographic map of the lunar south pole">
@@ -57,36 +71,44 @@
       <div id="tip" class="tip" hidden></div>
     </div>
     <div class="legend"><span id="legLo">0%</span><div id="legBar" class="bar"></div><span id="legHi">100%</span><span id="legLabel" class="muted"></span></div>
-    <p class="muted small">Click anywhere on the map to read the precomputed values at the nearest grid point. South polar stereographic projection, 0°E up, 90°E right, ±200 km around the pole (or ±40 km in pole zoom). Relief: LRO LOLA LDEM_75S_240M (shading illustrative, not real lighting).</p>
+    <p class="muted small" data-i18n="mapNote">Click anywhere on the map to see that point's values and timeline. South polar stereographic projection, 0°E up, 90°E right, ±200 km around the pole (or ±40 km in pole zoom). Relief: LRO LOLA LDEM_75S_240M (shading illustrative, not real lighting).</p>
   </section>
 
   <aside class="side">
-    <section class="card">
-      <h2>Site ranking <span class="pill" id="methodPill">terrain</span></h2>
-      <div class="tablewrap">
-      <table id="rank">
-        <thead><tr>
-          <th data-k="rank">#</th><th data-k="name">Site</th>
-          <th data-k="sun_pct" class="num">Sun %</th><th data-k="earth_pct" class="num">Earth %</th>
-          <th data-k="both_pct" class="num">Both %</th><th data-k="longest_dark_h" class="num">Longest night</th>
-        </tr></thead>
-        <tbody></tbody>
-      </table>
-      </div>
-      <p class="muted small">Share of the <span data-nhours>8760</span> hourly samples in <span data-year>2027</span> with the body's center above the horizon. Click a column to sort, a row to open the site.</p>
-    </section>
-
     <section class="card" id="pick">
-      <h2>Selected point</h2>
-      <div id="pickBody" class="muted">Click the map to choose any location between 84°S and the pole.</div>
+      <h2><span data-i18n="pickTitle">Selected point</span> <span class="pill methodPill">terrain</span></h2>
+      <div id="pickBody" class="muted" data-i18n="pickEmpty">Click the map to choose any location between 84°S and the pole.</div>
+      <div class="bands" id="pickBands" hidden><canvas></canvas><div class="btip" hidden></div></div>
+      <button id="pickOpen" class="linkbtn" hidden data-i18n="pickOpen">Open full detail ↓</button>
     </section>
 
     <section class="card">
-      <h2>Best grid spots <span class="pill">terrain</span></h2>
+      <h2><span data-i18n="bestTitle">Best grid spots</span> <span class="pill methodPill">terrain</span></h2>
       <ol id="best" class="best"></ol>
-      <p class="muted small">Top grid points by combined Sun + Earth time with LOLA terrain. Candidates for further study, not official landing regions.</p>
+      <p class="muted small" data-i18n="bestNote">Top grid points by combined Sun + Earth time in the selected range. Candidates for further study, not official landing regions.</p>
     </section>
   </aside>
+
+  <section class="card wide">
+    <h2><span data-i18n="rankTitle">Site ranking</span> <span class="pill methodPill">terrain</span></h2>
+    <p id="why" class="why"></p>
+    <div class="tablewrap">
+    <table id="rank">
+      <thead><tr>
+        <th data-k="rank">#</th><th data-k="name" data-i18n="thSite">Site</th>
+        <th data-k="sun_pct" class="num" data-i18n="thSun">Sun %</th>
+        <th data-k="earth_pct" class="num" data-i18n="thEarth">Earth %</th>
+        <th data-k="both_pct" class="num" data-i18n="thBoth">Both %</th>
+        <th data-k="longest_sun_h" class="num" data-i18n="thLongSun">Longest sunlight</th>
+        <th data-k="longest_dark_h" class="num" data-i18n="thLongDark">Longest night</th>
+        <th data-k="longest_earth_outage_h" class="num" data-i18n="thBlackout">Longest Earth blackout</th>
+        <th data-k="earth_interruptions" class="num" data-i18n="thDrops">Earth drop-outs</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    </div>
+    <p class="muted small" data-i18n-html="rankNote">Percent of hours in the selected range with the body's center above the horizon. "Longest" values are continuous runs (clipped to the range). Earth drop-outs = how many times direct line of sight to Earth is lost. Ranked by Both %; click a column to sort, a row to open the site.</p>
+  </section>
 
   <section class="card wide" id="detail">
     <div class="detailhead">
@@ -95,33 +117,31 @@
     </div>
     <p id="dMeta" class="muted small"></p>
     <div class="stats" id="dStats"></div>
-    <div class="charts">
-      <figure>
-        <figcaption>Local horizon (LOLA) with the Sun and Earth paths over <span data-year>2027</span></figcaption>
-        <svg id="hz" viewBox="0 0 720 260"></svg>
-        <div class="keys"><span class="k terr"></span>terrain horizon <span class="k sunk"></span>Sun center <span class="k earthk"></span>Earth center <span class="k zero"></span>spherical horizon (0°)</div>
-      </figure>
-      <figure>
-        <figcaption>Every hour of <span data-year>2027</span> (<span id="tlMethod">terrain</span>): days left to right, hour of day (UTC) top to bottom</figcaption>
-        <div class="rasterwrap"><canvas id="tl" width="365" height="24"></canvas><div class="months" id="months"></div></div>
-        <div class="keys"><span class="k bothk"></span>Sun + Earth <span class="k sunk"></span>Sun only <span class="k earthk"></span>Earth only <span class="k nonek"></span>neither <span id="tlSum"></span></div>
-      </figure>
-    </div>
+    <figure>
+      <figcaption data-i18n="tlCap">Timeline in the selected range (hover or tap for date and time, UTC)</figcaption>
+      <div class="bands big" id="dBands"><canvas></canvas><div class="btip" hidden></div></div>
+    </figure>
+    <figure id="hzFig">
+      <figcaption data-i18n="hzCap">Local horizon (LOLA) with the Sun and Earth paths in the selected range</figcaption>
+      <svg id="hz" viewBox="0 0 1000 260"></svg>
+      <div class="keys"><span class="k terr"></span><span data-i18n="keyTerr">terrain horizon</span> <span class="k sunk"></span><span data-i18n="keySun">Sun center</span> <span class="k earthk"></span><span data-i18n="keyEarth">Earth center</span> <span class="k zero"></span><span data-i18n="keyZero">spherical horizon (0°)</span></div>
+    </figure>
+    <p id="hzNone" class="muted small" hidden data-i18n="hzNone">Horizon profiles are stored for the five cited sites; for grid points the timeline uses the same LOLA horizon method.</p>
   </section>
 
-  <section class="card wide prose" id="method">
+  <section class="card wide prose" id="method" data-i18n-html="method">
     <h2>Method</h2>
     <ol>
       <li><b>Geometry.</b> Positions of the Sun and Earth seen from the Moon come from the NASA JPL <b>DE421</b> planetary ephemeris, rotated into the lunar <b>Mean Earth / Polar Axis</b> frame (<code>MOON_ME_DE421</code>) using NAIF SPICE kernels, via the open-source Skyfield library. Light-time and aberration are included.</li>
       <li><b>Sampling.</b> Every hour of <span data-year>2027</span> (UTC), <span data-nhours>8760</span> samples. For each location we compute the topocentric elevation and azimuth of the Sun's center and Earth's center.</li>
       <li><b>Spherical horizon.</b> A body is "visible" if its center is above 0° elevation on a smooth sphere. This ignores mountains and craters.</li>
-      <li><b>Terrain-aware horizon (default).</b> From the LRO LOLA polar DEM (240 m/pixel) we cast 360 rays (1° azimuth steps) out to <span id="rayKm">150</span> km, sample terrain every 240 m along great circles, account for lunar curvature, and keep the highest elevation angle per azimuth. The observer is <span id="obsH">2</span> m above the LOLA surface. A body is visible if its center is above the horizon at its azimuth.</li>
-      <li><b>Metrics.</b> Sun % (power), Earth % (direct-to-Earth radio line of sight), Sun + Earth % (both at once) and the longest continuous period without the Sun's center visible.</li>
-      <li><b>Grid.</b> <span id="gridN">—</span> points: 1.5 km spacing within 36 km of the pole, 6 km spacing out to 84°S, all in the same projection as the map.</li>
+      <li><b>Terrain-aware horizon (default).</b> From the LRO LOLA polar DEM (240 m/pixel) we cast 360 rays (1° azimuth steps) out to <span class="rayKm">150</span> km, sample terrain every 240 m along great circles, account for lunar curvature, and keep the highest elevation angle per azimuth. The observer is <span class="obsH">2</span> m above the LOLA surface. A body is visible if its center is above the horizon at its azimuth.</li>
+      <li><b>Metrics.</b> Sun % (power), Earth % (direct-to-Earth radio line of sight), Sun + Earth % (both at once), longest continuous sunlight and night, longest Earth blackout and the number of Earth contact drop-outs.</li>
+      <li><b>Grid and date ranges.</b> <span class="gridN">—</span> points: 1.5 km spacing within 36 km of the pole, 6 km spacing out to 84°S. The hourly visibility of every point is stored compactly (run-length encoded) and all statistics for a chosen date range are recomputed in your browser.</li>
     </ol>
     <h3>Validation</h3>
     <ul>
-      <li>Our vectorized elevation code matches Skyfield's own topocentric calculation for all five sites to <span id="valDiff">—</span>° (Jan–Mar 2027).</li>
+      <li>Our vectorized elevation code matches Skyfield's own topocentric calculation for all five sites to <span class="valDiff">—</span>° (Jan–Mar 2027).</li>
       <li>The underlying Skyfield pipeline was cross-checked against <a href="https://ssd.jpl.nasa.gov/horizons/" target="_blank" rel="noopener">JPL Horizons</a> (which used DE441 in that query) for Sun and Earth elevations at the sites.</li>
       <li>The DEM orientation was checked against known features (Shackleton crater appears as a ~2.4 km deep depression at its gazetteer center), and the most sunlit grid points (up to about 68% of 2027) cluster on the Shackleton rim and the connecting ridge, the same areas reported as highly illuminated in published LOLA studies (e.g., Mazarico et al., 2011). Our maxima are lower than published values because of the 1.5 km grid, the 240 m DEM and the center-of-disk rule.</li>
     </ul>
@@ -136,7 +156,7 @@
     </ul>
   </section>
 
-  <section class="card wide prose" id="sources">
+  <section class="card wide prose" id="sources" data-i18n-html="sources">
     <h2>Data &amp; sources</h2>
     <ul>
       <li><b>JPL DE421 planetary ephemeris</b> — Folkner, W. M., Williams, J. G., Boggs, D. H. (2008), <i>The Planetary and Lunar Ephemeris DE421</i>, JPL IOM 343R-08-003. Kernel: <a href="https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/" target="_blank" rel="noopener">NAIF generic_kernels/spk/planets/de421.bsp</a>.</li>
@@ -146,16 +166,17 @@
       <li><b>Illumination literature</b> — Mazarico, E. et al. (2011), <i>Illumination conditions of the lunar polar regions using LOLA topography</i>, Icarus 211, 1066–1081.</li>
       <li><b>Software</b> — <a href="https://rhodesmill.org/skyfield/" target="_blank" rel="noopener">Skyfield</a>, NumPy, Pillow. The page itself is plain HTML, CSS and JavaScript with no external services.</li>
     </ul>
-    <p class="muted small">Precomputed data: <a href="data/sites.json">sites.json</a> · <a href="data/grid.json">grid.json</a>. Regenerate with <code>python scripts/precompute.py --validate</code> (see README).</p>
+    <p class="muted small">Precomputed data: <a href="data/sites.json">sites.json</a> · <a href="data/grid.json">grid.json</a> · <a href="data/hourly.bin">hourly.bin</a>. Regenerate with <code>python scripts/precompute.py --validate</code> (see README).</p>
   </section>
 
-  <section class="card wide prose" id="about">
+  <section class="card wide prose" id="about" data-i18n-html="about">
     <h2>About</h2>
     <p><b>Team Kirby Landers</b> — José Ignacio García Ojeda (team owner) and Tamar Scarleth Huenchuman Sanchez, Osorno, Chile. Built for the NASA Space Apps Challenge 2026, challenge <i>Lunar Landing Site Navigator</i>.</p>
     <p><b>AI disclosure:</b> code was written with help from GitHub Copilot and an AI assistant. All results come from the open data and code in the <a href="https://github.com/garciaojedajoseignacio/polewindow" target="_blank" rel="noopener">repository</a>, licensed MIT.</p>
   </section>
 </main>
-<footer class="foot muted small">PoleWindow · Not affiliated with or endorsed by NASA. NASA data used under its public-domain policy.</footer>
+<footer class="foot muted small" data-i18n="footer">PoleWindow · Not affiliated with or endorsed by NASA. NASA data used under its public-domain policy.</footer>
+<script src="i18n.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
